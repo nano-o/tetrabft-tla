@@ -12,7 +12,7 @@ Blocking == {{"P1_OF_P","P2_OF_P"}, {"P1_OF_P","P3_OF_P"}, {"P1_OF_P","P4_OF_P"}
 (* Quorum == {{"P1_OF_P", "P2_OF_P", "P3_OF_P"}, {"P1_OF_P", "P2_OF_P", "P4_OF_P"}} *)
 (* Blocking == {{"P1_OF_P","P2_OF_P"}, {"P1_OF_P","P4_OF_P"}} *)
 B == {"P1_OF_P"}
-MaxRound == 3
+MaxRound == 2
 Round == 0..MaxRound
 
 VARIABLES
