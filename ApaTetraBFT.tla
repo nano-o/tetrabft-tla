@@ -1,4 +1,4 @@
------------------- MODULE ApaVoting ------------------
+------------------ MODULE ApaTetraBFT ------------------
 
 EXTENDS Integers
 
@@ -21,6 +21,6 @@ VARIABLES
     \* @type: P -> Set({round : Int, value : V, phase : Int});
     votes
 
-INSTANCE Voting
+INSTANCE TetraBFT
 
 ===========================================================

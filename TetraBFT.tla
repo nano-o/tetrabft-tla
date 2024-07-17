@@ -1,10 +1,10 @@
---------------------- MODULE Voting ---------------------
+--------------------- MODULE TetraBFT ---------------------
 
-(**********************************************************************************)
-(* This is a high-level specification of the unauthenticated consensus algorithm. *)
-(* There is no network or messages at this level of abstraction, but we do model  *)
-(* Byzantine failures.                                                            *)
-(**********************************************************************************)
+(*********************************************************************************)
+(* This is a high-level specification of the TetraBFT consensus algorithm. There *)
+(* is no network or messages at this level of abstraction, but we do model       *)
+(* Byzantine failures.                                                           *)
+(*********************************************************************************)
 
 EXTENDS Integers
 
