@@ -6,6 +6,8 @@
 (* Byzantine failures.                                                           *)
 (*********************************************************************************)
 
+\* WIP: liveness
+
 EXTENDS Integers
 
 CONSTANTS
@@ -13,7 +15,6 @@ CONSTANTS
 ,   P \* the set of processes (typically 3f+1 nodes)
 ,   Quorum \* the set of quorums (typically sets of 2f+1 nodes out of 3f+1)
 ,   Blocking \* the set of blocking sets (typically sets of f+1 nodes out of 3f+1)
-,   B \* the set of malicious nodes (typically f nodes)
 ,   Round \* the set of rounds
 
 \* Each round consists of 4 phases:
@@ -38,12 +39,13 @@ Max(S, default) ==
 
 \* We now specify the behaviors of the algorithm:
 
-VARIABLES votes, round
-vars == <<round, votes>>
+VARIABLES votes, round, B \* B is the set of Byzantine processes
+vars == <<round, votes, B>>
 
 TypeOK ==
     /\ votes \in [P -> SUBSET Vote]
     /\ round \in [P -> Round]
+    /\ B \in SUBSET P
 TypeOK_ == TypeOK
 
 decided == {v \in V : \E Q \in Quorum, r \in Round : \A p \in Q \ B :
@@ -93,13 +95,14 @@ ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
 Init ==
     /\ votes = [p \in P |-> {}]
     /\ round = [p \in P |-> 0]
+    /\ B \in {P \ Q : Q \in Quorum}
 
 DoVote(p, v, r, phase) ==
     \* never voted before in this round and phase:
     /\ \A w \in V : [round |-> r, phase |-> phase, value |-> w] \notin votes[p]
     \* cast the vote:
     /\ votes' = [votes EXCEPT ![p] = @ \union {[round |-> r, phase |-> phase, value |-> v]}]
-    /\ UNCHANGED <<round>>
+    /\ UNCHANGED <<round, B>>
 
 Vote1(p, v, r) ==
     /\ r = round[p]
@@ -129,13 +132,14 @@ Vote4(p, v, r) ==
 StartRound(p, r) ==
     /\ round[p] < r
     /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<votes>>
+    /\ UNCHANGED <<votes, B>>
 
 \* This models malicious behavior
 ByzantineHavoc ==
     \E new_votes \in [B -> SUBSET Vote] : \E new_round \in [B -> Round] :
     /\  votes' = [p \in P |-> IF p \in B THEN new_votes[p] ELSE votes[p]]
     /\  round' = [p \in P |-> IF p \in B THEN new_round[p] ELSE round[p]]
+    /\  UNCHANGED B
 
 Next ==
     \/  ByzantineHavoc
