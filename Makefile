@@ -1,6 +1,6 @@
 APA_RELEASE_URL=https://github.com/informalsystems/apalache/releases/download/v0.44.11/apalache-0.44.11.tgz
 APA=apalache-0.44.11
-APA_ARCHIVE=apalache-0.44.11.tgz
+APA_ARCHIVE=$(APA).tgz
 
 all: check
 

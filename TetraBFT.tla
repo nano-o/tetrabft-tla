@@ -71,10 +71,9 @@ ClaimsSafeAt(v, r, r2, p, phase) ==
 \* Whether value v is safe to vote for/propose in round r by process p
 \* In case of a vote, we'll use phaseA=4 and phaseB=1
 \* In case of a proposal, we'll use phaseA=3 and phaseB=2
-ShowsSafeAt(v, r, phaseA, phaseB) == \* TODO the name ShowsSafeAt is not great; what is the thing that is showing?
+ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
     \/ r = 0
-    \/ \E Q \in Quorum :
-        /\ \A q \in Q : round[q] >= r \* every member of Q is in round at least r
+    \/  /\ \A q \in Q : round[q] >= r \* every member of Q is in round at least r
         /\  \/ \A q \in Q : HighestVote(q, phaseA, r).round = -1 \* members of Q never voted in phaseA before r
             \/ \E r2 \in Round :
                 /\ 0 <= r2 /\ r2 < r
@@ -104,7 +103,7 @@ DoVote(p, v, r, phase) ==
 
 Vote1(p, v, r) ==
     /\ r = round[p]
-    /\ ShowsSafeAt(v, r, 4, 1)
+    /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
     /\ DoVote(p, v, r, 1)
 
 \* whether v has been voted for by a quorum of p in phase `phase' of round `r':
@@ -155,9 +154,6 @@ Safety == \A v1,v2 \in decided : v1 = v2
 \* Simple properties
 
 VotedFor(p, r, v) ==  [round |-> r, phase |-> 4, value |-> v] \in votes[p]
-
-OneValuePerBallot == \A p \in P \ B : \A vt,vt2 \in votes[p] :
-    vt2.round = vt.round /\ vt2.phase = vt.phase => vt2.value = vt.value
 
 NoFutureVote == \A p \in P \ B : \A vt \in votes[p] : vt.round <= round[p]
 
