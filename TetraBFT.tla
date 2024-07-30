@@ -113,7 +113,10 @@ DoVote(p, v, r, phase) ==
 Vote1(p, v, r) ==
     /\ r = round[p]
     /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
+    /\ goodRound => \A p2 \in P \ B : \A v2 \in V :
+        [round |-> r, phase |-> 1, value |-> v2] \notin votes[p2] => v2 = v
     /\ DoVote(p, v, r, 1)
+
 
 \* whether v has been voted for by a quorum of p in phase `phase' of round `r':
 Accepted(p, v, r, phase) == \E Q \in Quorum :
@@ -150,7 +153,7 @@ ByzantineHavoc ==
     /\  UNCHANGED <<B, goodRound>>
 
 Next ==
-    \/  ByzantineHavoc
+    \* \/  ByzantineHavoc
     \/  \E p \in P, v \in V, r \in Round :
         \/ Vote1(p, v, r)
         \/ Vote2(p, v, r)
@@ -161,6 +164,50 @@ Next ==
 Spec == Init /\ [][Next]_vars
 
 Safety == \A v1,v2 \in decided : v1 = v2
+
+\* Manual encoding of ENABLED for Apalache:
+
+Vote1_ENABLED(p, v, r) ==
+    /\ r = round[p]
+    /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
+    /\ \A w \in V : [round |-> r, phase |-> 1, value |-> w] \notin votes[p]
+    /\ goodRound => \A p2 \in P \ B : \A v2 \in V :
+        [round |-> r, phase |-> 1, value |-> v2] \notin votes[p2] => v2 = v
+    
+Vote2_ENABLED(p, v, r) ==
+    /\ r = round[p]
+    /\ Accepted(p, v, r, 1)
+    /\ \A w \in V : [round |-> r, phase |-> 2, value |-> w] \notin votes[p]
+    
+Vote3_ENABLED(p, v, r) ==
+    /\ r = round[p]
+    /\ Accepted(p, v, r, 2)
+    /\ \A w \in V : [round |-> r, phase |-> 3, value |-> w] \notin votes[p]
+
+Vote4_ENABLED(p, v, r) ==
+    /\ r = round[p]
+    /\ Accepted(p, v, r, 3)
+    /\ \A w \in V : [round |-> r, phase |-> 4, value |-> w] \notin votes[p]
+
+StartRound_ENABLED(p, r) == round[p] < r
+
+\* For use with TLC to catch errors in the ENABLED predicates:
+ENABLED_OK == \A p \in P, v \in V, r \in Round :
+    /\  (ENABLED Vote1(p, v, r)) = Vote1_ENABLED(p, v, r)
+    /\  (ENABLED Vote2(p, v, r)) = Vote2_ENABLED(p, v, r)
+    /\  (ENABLED Vote3(p, v, r)) = Vote3_ENABLED(p, v, r)
+    /\  (ENABLED Vote4(p, v, r)) = Vote4_ENABLED(p, v, r)
+    /\  (ENABLED StartRound(p, r)) = StartRound_ENABLED(p, r)
+
+Liveness ==
+    /\  goodRound
+    /\  \A p \in P \ B, v \in V, r \in Round :
+        /\ \neg Vote1_ENABLED(p, v, r)
+        /\ \neg Vote2_ENABLED(p, v, r)
+        /\ \neg Vote3_ENABLED(p, v, r)
+        /\ \neg Vote4_ENABLED(p, v, r)
+        /\ \neg StartRound_ENABLED(p, r)
+    =>  decided # {}
 
 \* Simple properties
 
