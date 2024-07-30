@@ -18,7 +18,11 @@ VARIABLES
     \* @type: P -> Int;
     round,
     \* @type: P -> Set({round : Int, value : V, phase : Int});
-    votes
+    votes,
+    \* @type: Set(P);
+    B,
+    \* @type: Bool;
+    goodRound
 
 INSTANCE TetraBFT
 

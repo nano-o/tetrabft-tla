@@ -39,13 +39,18 @@ Max(S, default) ==
 
 \* We now specify the behaviors of the algorithm:
 
-VARIABLES votes, round, B \* B is the set of Byzantine processes
-vars == <<round, votes, B>>
+VARIABLES 
+    B, \* B is the set of Byzantine processes
+    votes,
+    round,
+    goodRound \* set to true to indicate we are starting a round that lasts "long enough"
+vars == <<B, round, votes, goodRound>>
 
 TypeOK ==
     /\ votes \in [P -> SUBSET Vote]
     /\ round \in [P -> Round]
     /\ B \in SUBSET P
+    /\ goodRound \in BOOLEAN
 TypeOK_ == TypeOK
 
 decided == {v \in V : \E Q \in Quorum, r \in Round : \A p \in Q \ B :
@@ -96,13 +101,14 @@ Init ==
     /\ votes = [p \in P |-> {}]
     /\ round = [p \in P |-> 0]
     /\ B \in {P \ Q : Q \in Quorum}
+    /\ goodRound = FALSE
 
 DoVote(p, v, r, phase) ==
     \* never voted before in this round and phase:
     /\ \A w \in V : [round |-> r, phase |-> phase, value |-> w] \notin votes[p]
     \* cast the vote:
     /\ votes' = [votes EXCEPT ![p] = @ \union {[round |-> r, phase |-> phase, value |-> v]}]
-    /\ UNCHANGED <<round, B>>
+    /\ UNCHANGED <<round, B, goodRound>>
 
 Vote1(p, v, r) ==
     /\ r = round[p]
@@ -130,16 +136,18 @@ Vote4(p, v, r) ==
     /\ DoVote(p, v, r, 4)
 
 StartRound(p, r) ==
-    /\ round[p] < r
-    /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<votes, B>>
+    /\  round[p] < r
+    /\  round' = [round EXCEPT ![p] = r]
+    /\  \/  /\  goodRound' = TRUE
+            /\  UNCHANGED <<votes, B>>
+        \/  /\  UNCHANGED <<votes, B, goodRound>>
 
 \* This models malicious behavior
 ByzantineHavoc ==
     \E new_votes \in [B -> SUBSET Vote] : \E new_round \in [B -> Round] :
     /\  votes' = [p \in P |-> IF p \in B THEN new_votes[p] ELSE votes[p]]
     /\  round' = [p \in P |-> IF p \in B THEN new_round[p] ELSE round[p]]
-    /\  UNCHANGED B
+    /\  UNCHANGED <<B, goodRound>>
 
 Next ==
     \/  ByzantineHavoc
