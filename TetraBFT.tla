@@ -133,10 +133,9 @@ StartRound(p, r) ==
 
 \* This models malicious behavior
 ByzantineHavoc ==
-    \E new_votes \in [P -> SUBSET Vote] :
-    \E new_round \in [P -> Round] :
-        /\  votes' = [p \in P |-> IF p \in B THEN new_votes[p] ELSE votes[p]]
-        /\  round' = [p \in P |-> IF p \in B THEN new_round[p] ELSE round[p]]
+    \E new_votes \in [B -> SUBSET Vote] : \E new_round \in [B -> Round] :
+    /\  votes' = [p \in P |-> IF p \in B THEN new_votes[p] ELSE votes[p]]
+    /\  round' = [p \in P |-> IF p \in B THEN new_round[p] ELSE round[p]]
 
 Next ==
     \/  ByzantineHavoc
