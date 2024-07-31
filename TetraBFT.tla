@@ -98,7 +98,7 @@ ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
                 \* all members of Q that voted in r2 voted for v:
                 /\ \A q \in Q : \A vt \in votes[q] : vt.round < r =>
                     /\  vt.phase = phaseA => vt.round <= r2
-                    /\  vt.phase = phaseA /\ vt.round = r2 => vt.value = v
+                    /\  (vt.phase = phaseA /\ vt.round = r2) => vt.value = v
                 /\ \* v must be safe at r2
                     \E S \in Blocking : \A q \in S : ClaimsSafeAt(v, r, r2, q, phaseB)
 
@@ -312,11 +312,14 @@ LivenessInvariant1_ ==
 
 LivenessInvariant2 ==
     goodRound > -1 =>
-        /\  \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
-        /\  (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
+        \A p \in P \ Byz : 
+            /\  proposed
+            /\  (\A p2 \in P \ Byz : round[p2] = goodRound)
+            /\  (\neg Vote1_ENABLED(p, proposal, goodRound))
+            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 1
 LivenessInvariant2_ ==
-    /\ goodRound = 2
     /\ TypeOK
+    /\ LivenessInvariant1
     /\ \E Q \in Quorum : Byz = P \ Q
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
@@ -328,7 +331,7 @@ LivenessInvariant2_ ==
         /\ \A p \in P \ Byz :
             /\  round[p] <= goodRound
             /\  \A vt \in votes[p] : vt.round <= goodRound
-        /\  \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
-        /\  (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
+        \* /\  \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
+        \* /\  (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
 
 =============================================================================
