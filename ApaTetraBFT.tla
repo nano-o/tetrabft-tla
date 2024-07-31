@@ -21,9 +21,11 @@ VARIABLES
     votes,
     \* @type: Set(P);
     Byz,
-    \* @type: Bool;
+    \* @type: Int;
     goodRound,
-    \* @type: Int -> V;
+    \* @type: Bool;
+    proposed,
+    \* @type: V;
     proposal
 
 INSTANCE TetraBFT
