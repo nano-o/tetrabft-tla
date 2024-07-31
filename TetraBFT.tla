@@ -15,7 +15,13 @@ CONSTANTS
 ,   P \* the set of processes (typically 3f+1 nodes)
 ,   Quorum \* the set of quorums (typically sets of 2f+1 nodes out of 3f+1)
 ,   Blocking \* the set of blocking sets (typically sets of f+1 nodes out of 3f+1)
+,   FailProneSets \* the set of fail-prone sets
 ,   Round \* the set of rounds
+,   Byz \* the set of Byzantine processes
+
+ASSUME
+    /\  \A F \in FailProneSets : \E Q \in Quorum : Q \subseteq P \ F
+    /\  \A F1, F2, F3 \in FailProneSets : P \ (F1 \cup F2 \cup F3) # {}
 
 \* Each round consists of 4 phases:
 Phase == 1..4
@@ -40,20 +46,21 @@ MaxVote(S, default) ==
 \* We now specify the behaviors of the algorithm:
 
 VARIABLES 
-    Byz, \* Byz is the set of Byzantine processes
+    \* Byz, \* Byz is the set of Byzantine processes
     votes,
     round,
     proposed, \* whether a proposal has been made in the good round
     proposal, \* the good-round proposal
     goodRound \* the round that lasts long enough
-vars == <<Byz, round, votes, proposed, proposal, goodRound>>
+vars == <<round, votes, proposed, proposal, goodRound>>
 
 Init ==
     /\ votes = [p \in P |-> {}]
     /\ round = [p \in P |-> -1]
-    /\ Byz \in {P \ Q : Q \in Quorum}
+    \* /\ Byz \in FailProneSets
     /\ proposed = FALSE
     /\ proposal = CHOOSE v \in V : TRUE
+    \* TODO: allow -1 to not have a good round
     /\ goodRound \in Round \* \cup {-1} \* we "guess" the good round
 
 TypeOK ==
@@ -61,7 +68,7 @@ TypeOK ==
     /\ round \in [P -> Round \cup {-1}]
     /\ proposed \in BOOLEAN
     /\ proposal \in V
-    /\ Byz \in SUBSET P
+    \* /\ Byz \in SUBSET P
     /\ goodRound \in Round \cup {-1}
 TypeOK_ == TypeOK
 
@@ -71,7 +78,8 @@ decided == {v \in V : \E Q \in Quorum, r \in Round : \A p \in Q \ Byz :
 \* `v' is safe in round `r2' according to the votes of process `p' in phase `phase' before round r:
 ClaimsSafeAt(v, r, r2, p, phase) ==
     \/ r2 = 0
-    \/ \E vt1 \in votes[p] : vt1.round < r /\ r2 <= vt1.round /\ vt1.phase = phase
+    \/ \E vt1 \in votes[p] :
+        /\  vt1.round < r /\ r2 <= vt1.round /\ vt1.phase = phase
         /\  \/ vt1.value = v
             \/ \E vt2 \in votes[p] :
                 /\ r2 <= vt2.round /\ vt2.round < vt1.round
@@ -86,9 +94,9 @@ ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
         /\  \/ \A q \in Q : \A vt \in votes[q] : vt.round < r => vt.phase # phaseA \* members of Q never voted in phaseA before round r
             \/ \E r2 \in Round :
                 /\ 0 <= r2 /\ r2 < r
-                \* no member of Q voted in phaseA after r2, and
+                \* no member of Q voted in phaseA after r2 and before r, and
                 \* all members of Q that voted in r2 voted for v:
-                /\ \A q \in Q : \A vt \in votes[q] :
+                /\ \A q \in Q : \A vt \in votes[q] : vt.round < r =>
                     /\  vt.phase = phaseA => vt.round <= r2
                     /\  vt.phase = phaseA /\ vt.round = r2 => vt.value = v
                 /\ \* v must be safe at r2
@@ -106,7 +114,7 @@ StartRound(p, r) ==
     /\  goodRound > -1 => r <= goodRound \* a good round lasts "long enough", i.e. forever
     /\  round[p] < r
     /\  round' = [round EXCEPT ![p] = r]
-    /\  UNCHANGED <<votes, Byz, proposed, proposal, goodRound>>
+    /\  UNCHANGED <<votes, proposed, proposal, goodRound>>
 
 Propose(v) ==
     /\  goodRound > -1
@@ -114,7 +122,7 @@ Propose(v) ==
     /\  \E Q \in Quorum : ShowsSafeAt(Q, v, goodRound, 3, 2)
     /\  proposed' = TRUE
     /\  proposal' = v
-    /\  UNCHANGED <<votes, round, Byz, goodRound>>
+    /\  UNCHANGED <<votes, round, goodRound>>
 
 Vote1(p, v, r) ==
     /\ p \notin Byz
@@ -122,7 +130,7 @@ Vote1(p, v, r) ==
     /\ r = goodRound => proposed /\ v = proposal
     /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
     /\ DoVote(p, v, r, 1)
-    /\ UNCHANGED <<Byz, round, proposed, proposal, goodRound>>
+    /\ UNCHANGED <<round, proposed, proposal, goodRound>>
 
 \* whether v has been voted for by a quorum in phase `phase' of round `r':
 Accepted(p, v, r, phase) == \E Q \in Quorum :
@@ -134,7 +142,7 @@ Vote2(p, v, r) ==
     /\ Accepted(p, v, r, 1)
     /\ DoVote(p, v, r, 2)
     /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<Byz, proposed, proposal, goodRound>>
+    /\ UNCHANGED <<proposed, proposal, goodRound>>
 
 Vote3(p, v, r) ==
     /\ p \notin Byz
@@ -142,7 +150,7 @@ Vote3(p, v, r) ==
     /\ Accepted(p, v, r, 2)
     /\ DoVote(p, v, r, 3)
     /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<Byz, proposed, proposal, goodRound>>
+    /\ UNCHANGED <<proposed, proposal, goodRound>>
 
 Vote4(p, v, r) ==
     /\ p \notin Byz
@@ -150,7 +158,7 @@ Vote4(p, v, r) ==
     /\ Accepted(p, v, r, 3)
     /\ DoVote(p, v, r, 4)
     /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<Byz, proposed, proposal, goodRound>>
+    /\ UNCHANGED <<proposed, proposal, goodRound>>
 
 \* This models malicious behavior
 \* ByzantineHavoc ==
@@ -162,7 +170,7 @@ ByzantineHavoc ==
     /\  \E p \in Byz :
             /\  \E new_votes \in SUBSET Vote : votes' = [votes EXCEPT ![p] = new_votes]
             /\  \E new_round \in Round : round' = [round EXCEPT ![p] = new_round]
-    /\  UNCHANGED <<Byz, proposed, proposal, goodRound>>
+    /\  UNCHANGED <<proposed, proposal, goodRound>>
 
 Next ==
     \E p \in P, v \in V, r \in Round :
@@ -279,7 +287,7 @@ Invariant_ == TypeOK /\ Invariant1 /\ Invariant
 
 Max(S) == CHOOSE x \in S : \A y \in S : x >= y
 
-LivenessInvariant == goodRound > -1 /\ proposed =>
+LivenessInvariant1 == goodRound > -1 /\ proposed =>
     \/  goodRound = 0
     \/  \E Q \in Quorum :
         /\ \A p \in Q \ Byz : round[p] = goodRound
@@ -292,7 +300,7 @@ LivenessInvariant == goodRound > -1 /\ proposed =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
                 /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
-LivenessInvariant_ == 
+LivenessInvariant1_ == 
     /\  TypeOK
     /\ \A p \in P \ Byz :
         /\  round[p] <= goodRound
@@ -300,6 +308,27 @@ LivenessInvariant_ ==
     /\  \E Q \in Quorum : Byz = P \ Q
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
-    /\  LivenessInvariant
+    /\  LivenessInvariant1
+
+LivenessInvariant2 ==
+    goodRound > -1 =>
+        /\  \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
+        /\  (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
+LivenessInvariant2_ ==
+    /\ goodRound = 2
+    /\ TypeOK
+    /\ \E Q \in Quorum : Byz = P \ Q
+    /\  OneValuePerPhasePerRound
+    /\  VoteHasQuorumInPreviousPhase
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
+             vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
+                \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed
+    /\  goodRound > -1 =>
+        /\ \A p \in P \ Byz :
+            /\  round[p] <= goodRound
+            /\  \A vt \in votes[p] : vt.round <= goodRound
+        /\  \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
+        /\  (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
 
 =============================================================================
