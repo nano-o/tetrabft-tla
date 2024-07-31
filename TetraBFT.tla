@@ -62,30 +62,20 @@ TypeOK ==
     /\ proposed \in BOOLEAN
     /\ proposal \in V
     /\ Byz \in SUBSET P
-    /\ goodRound \in Round
+    /\ goodRound \in Round \cup {-1}
 TypeOK_ == TypeOK
 
 decided == {v \in V : \E Q \in Quorum, r \in Round : \A p \in Q \ Byz :
     [round |-> r, phase |-> 4, value |-> v] \in votes[p] }
 
-\* largest vote of p in phase `phase' before round r
-HighestVote(p, phase, r) ==
-    LET vs == {v \in votes[p] : v.phase = phase /\ v.round < r} IN
-      MaxVote(vs, NotAVote)
-
-\* second largest vote (for a value different from the highest vote) of p in phase `phase' before round r
-SecondHighestVote(p, phase, r) ==
-    LET largest == HighestVote(p, phase, r)
-        vs == {v \in votes[p] : v.phase = phase /\ v.round < r /\ v.value # largest.value}
-    IN MaxVote(vs, NotAVote)
-
 \* `v' is safe in round `r2' according to the votes of process `p' in phase `phase' before round r:
 ClaimsSafeAt(v, r, r2, p, phase) ==
     \/ r2 = 0
-    \/ LET mv == HighestVote(p, 1, r) IN \* Highest vote of p in phase 1 before round r
-         /\ r2 <= mv.round
-         /\ mv.value = v
-    \/ r2 <= SecondHighestVote(p, 1, r).round
+    \/ \E vt1 \in votes[p] : vt1.round < r /\ r2 <= vt1.round /\ vt1.phase = phase
+        /\  \/ vt1.value = v
+            \/ \E vt2 \in votes[p] :
+                /\ r2 <= vt2.round /\ vt2.round < vt1.round
+                /\ vt2.phase = phase /\ vt2.value # vt1.value
 
 \* Whether value v is safe to vote for/propose in round r by process p
 \* In case of a vote, we'll use phaseA=4 and phaseB=1
@@ -93,21 +83,16 @@ ClaimsSafeAt(v, r, r2, p, phase) ==
 ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
     \/ r = 0
     \/  /\ \A q \in Q : round[q] >= r \* every member of Q is in round at least r
-        /\  \/ \A q \in Q : HighestVote(q, phaseA, r).round = -1 \* members of Q never voted in phaseA before r
+        /\  \/ \A q \in Q : \A vt \in votes[q] : vt.round < r => vt.phase # phaseA \* members of Q never voted in phaseA before round r
             \/ \E r2 \in Round :
                 /\ 0 <= r2 /\ r2 < r
-                \* no member of Q voted in phaseA in round r2 or later, and
+                \* no member of Q voted in phaseA after r2, and
                 \* all members of Q that voted in r2 voted for v:
-                /\ \A q \in Q : LET hvq == HighestVote(q, phaseA, r) IN
-                    /\ hvq.round <= r2
-                    /\ hvq.round = r2 => hvq.value = v
+                /\ \A q \in Q : \A vt \in votes[q] :
+                    /\  vt.phase = phaseA => vt.round <= r2
+                    /\  vt.phase = phaseA /\ vt.round = r2 => vt.value = v
                 /\ \* v must be safe at r2
-                    \/ \E S \in Blocking : \A q \in S : ClaimsSafeAt(v, r, r2, q, phaseB)
-                    \/ \E S1,S2 \in Blocking : \E v1,v2 \in V : \E r3,r4 \in Round :
-                        /\ v1 # v2
-                        /\ r2 <= r3 /\ r3 < r4 /\ r4 < r
-                        /\ \A q \in S1 : ClaimsSafeAt(v1, r, r3, q, phaseB)
-                        /\ \A q \in S2 : ClaimsSafeAt(v2, r, r4, q, phaseB)
+                    \E S \in Blocking : \A q \in S : ClaimsSafeAt(v, r, r2, q, phaseB)
 
 \* just a helper:
 DoVote(p, v, r, phase) ==
@@ -115,7 +100,6 @@ DoVote(p, v, r, phase) ==
     /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # phase
     \* cast the vote:
     /\ votes' = [votes EXCEPT ![p] = @ \union {[round |-> r, phase |-> phase, value |-> v]}]
-    /\ UNCHANGED <<round, Byz, proposed, proposal, goodRound>>
 
 StartRound(p, r) ==
     /\  p \notin Byz
@@ -126,18 +110,19 @@ StartRound(p, r) ==
 
 Propose(v) ==
     /\  goodRound > -1
-    /\  \E Q \in Quorum : ShowsSafeAt(Q, v, goodRound, 3, 2)
     /\  \neg proposed
+    /\  \E Q \in Quorum : ShowsSafeAt(Q, v, goodRound, 3, 2)
     /\  proposed' = TRUE
     /\  proposal' = v
     /\  UNCHANGED <<votes, round, Byz, goodRound>>
 
 Vote1(p, v, r) ==
     /\ p \notin Byz
-    /\ r = round[p] \* TODO: why is r a parameter?
+    /\ r = round[p]
     /\ r = goodRound => proposed /\ v = proposal
     /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
     /\ DoVote(p, v, r, 1)
+    /\ UNCHANGED <<Byz, round, proposed, proposal, goodRound>>
 
 \* whether v has been voted for by a quorum in phase `phase' of round `r':
 Accepted(p, v, r, phase) == \E Q \in Quorum :
@@ -145,21 +130,27 @@ Accepted(p, v, r, phase) == \E Q \in Quorum :
 
 Vote2(p, v, r) ==
     /\ p \notin Byz
-    /\ r = round[p]
+    /\ round[p] <= r
     /\ Accepted(p, v, r, 1)
     /\ DoVote(p, v, r, 2)
+    /\ round' = [round EXCEPT ![p] = r]
+    /\ UNCHANGED <<Byz, proposed, proposal, goodRound>>
 
 Vote3(p, v, r) ==
     /\ p \notin Byz
-    /\ r = round[p]
+    /\ round[p] <= r
     /\ Accepted(p, v, r, 2)
     /\ DoVote(p, v, r, 3)
+    /\ round' = [round EXCEPT ![p] = r]
+    /\ UNCHANGED <<Byz, proposed, proposal, goodRound>>
 
 Vote4(p, v, r) ==
     /\ p \notin Byz
-    /\ r = round[p]
+    /\ round[p] <= r
     /\ Accepted(p, v, r, 3)
     /\ DoVote(p, v, r, 4)
+    /\ round' = [round EXCEPT ![p] = r]
+    /\ UNCHANGED <<Byz, proposed, proposal, goodRound>>
 
 \* This models malicious behavior
 \* ByzantineHavoc ==
@@ -171,7 +162,7 @@ ByzantineHavoc ==
     /\  \E p \in Byz :
             /\  \E new_votes \in SUBSET Vote : votes' = [votes EXCEPT ![p] = new_votes]
             /\  \E new_round \in Round : round' = [round EXCEPT ![p] = new_round]
-    /\  UNCHANGED <<Byz, proposal, goodRound>>
+    /\  UNCHANGED <<Byz, proposed, proposal, goodRound>>
 
 Next ==
     \E p \in P, v \in V, r \in Round :
@@ -191,8 +182,8 @@ Safety == \A v1,v2 \in decided : v1 = v2
 
 Propose_ENABLED(v) ==
     /\  goodRound > -1
-    /\  \E Q \in Quorum : ShowsSafeAt(Q, v, goodRound, 3, 2)
     /\  \neg proposed
+    /\  \E Q \in Quorum : ShowsSafeAt(Q, v, goodRound, 3, 2)
 
 Vote1_ENABLED(p, v, r) ==
     /\ p \notin Byz
@@ -281,15 +272,9 @@ VotesSafe_ == TypeOK /\ Invariant1 /\ VotesSafe
 
 \* The full inductive invariant:
 Invariant ==
-    /\  TypeOK
-    /\  \E Q \in Quorum : Byz = P \ Q
-    /\  NoFutureVote
-    /\  OneValuePerPhasePerRound
-    \* It's interesting that we don't need the fact that there's at most one value voted by well-behaved processes in phases > 1
-    /\  VoteHasQuorumInPreviousPhase
     /\  VotesSafe
-    /\  Safety
-Invariant_ == Invariant
+    \* /\  Safety
+Invariant_ == TypeOK /\ Invariant1 /\ Invariant
 
 \* Now liveness!
 
