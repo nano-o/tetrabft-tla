@@ -45,7 +45,7 @@ VARIABLES
     round,
     proposed, \* whether a proposal has been made in the good round
     proposal, \* the good-round proposal
-    goodRound \* set to true to indicate we are starting a round that lasts "long enough"
+    goodRound \* the round that lasts long enough
 vars == <<Byz, round, votes, proposed, proposal, goodRound>>
 
 Init ==
@@ -54,7 +54,7 @@ Init ==
     /\ Byz \in {P \ Q : Q \in Quorum}
     /\ proposed = FALSE
     /\ proposal = CHOOSE v \in V : TRUE
-    /\ goodRound \in Round \cup {-1} \* we "guess" the good round
+    /\ goodRound \in Round \* \cup {-1} \* we "guess" the good round
 
 TypeOK ==
     /\ votes \in [P -> SUBSET Vote]
@@ -166,13 +166,13 @@ ByzantineHavoc ==
 
 Next ==
     \E p \in P, v \in V, r \in Round :
+        \/ ByzantineHavoc
         \/ Vote1(p, v, r)
         \/ Vote2(p, v, r)
         \/ Vote3(p, v, r)
         \/ Vote4(p, v, r)
         \/ StartRound(p, r)
         \/ Propose(v)
-        \/ ByzantineHavoc
 
 Spec == Init /\ [][Next]_vars
 
@@ -270,7 +270,6 @@ VotesSafe == \A p \in P \ Byz : \A vt \in votes[p] :
     SafeAt(vt.round, vt.value)
 VotesSafe_ == TypeOK /\ Invariant1 /\ VotesSafe
 
-\* The full inductive invariant:
 Invariant ==
     /\  VotesSafe
     \* /\  Safety
@@ -280,22 +279,24 @@ Invariant_ == TypeOK /\ Invariant1 /\ Invariant
 
 Max(S) == CHOOSE x \in S : \A y \in S : x >= y
 
-LivenessInvariant == goodRound > -1 =>
-    /\  \A p \in P \ Byz : round[p] <= goodRound
-    \* /\  \E Q \in Quorum : ShowsSafeAt(Q, proposal, mr, 3, 2) \* Takes too long...
-    /\  \/  \E Q \in Quorum : \A p \in Q \ Byz :
-            /\  \A vt \in votes[p] : vt.round >= goodRound
-            /\  round[p] = goodRound
-        \/  \E r \in Round :
-            /\  0 <= r
-            /\  r < goodRound
-            /\  \A p \in P \ Byz : \A vt \in votes[p] : 
+LivenessInvariant == goodRound > -1 /\ proposed =>
+    \/  goodRound = 0
+    \/  \E Q \in Quorum :
+        /\ \A p \in Q \ Byz : round[p] = goodRound
+        /\  \* no member voted in phase 3 before round goodRound
+            \/ \A p \in Q \ Byz : \A vt \in votes[p] : \neg (vt.phase = 3 /\ vt.round < goodRound)
+            \* highest ...
+            \/ \E r \in Round :
+                /\ 0 <= r /\ r < goodRound
+                /\ \A p \in Q \ Byz : \A vt \in votes[p] : vt.phase = 3 /\ vt.round < goodRound =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
-            /\  TRUE
-                \* TODO
+                /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
 LivenessInvariant_ == 
     /\  TypeOK
+    /\ \A p \in P \ Byz :
+        /\  round[p] <= goodRound
+        /\  \A vt \in votes[p] : vt.round <= goodRound
     /\  \E Q \in Quorum : Byz = P \ Q
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
