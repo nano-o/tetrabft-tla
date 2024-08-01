@@ -8,7 +8,6 @@ V == {"V1_OF_V", "V2_OF_V"}
 \* Quorums are any 3 out of 4:
 \* FailProneSets == {{"P1_OF_P"}, {"P2_OF_P"}, {"P3_OF_P"}}
 \* Quorum == {{"P1_OF_P", "P2_OF_P", "P3_OF_P"}, {"P1_OF_P", "P2_OF_P", "P4_OF_P"}, {"P1_OF_P", "P3_OF_P", "P4_OF_P"}, {"P2_OF_P", "P3_OF_P", "P4_OF_P"}}
-\* Blocking sets are any 2 out of 4:
 \* Blocking == {{"P1_OF_P","P2_OF_P"}, {"P1_OF_P","P3_OF_P"}, {"P1_OF_P","P4_OF_P"}, {"P2_OF_P","P3_OF_P"}, {"P2_OF_P","P4_OF_P"}, {"P3_OF_P","P4_OF_P"}}
 \* With 3 processes, let's say only p1 and p3 may be Byzantine:
 Quorum == {{"P1_OF_P", "P2_OF_P"}, {"P2_OF_P", "P3_OF_P"}}

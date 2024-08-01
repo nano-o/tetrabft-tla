@@ -31,18 +31,6 @@ Vote == [round: Round, phase: Phase, value: V]
 
 NotAVote == [round |-> -1, phase |-> 1, value |-> CHOOSE v \in V : TRUE]
 
-\* Whether vote v is maximal in S
-\* @type: ($voteType, Set($voteType)) => Bool;
-MaximalVote(vt, S) ==
-    /\ vt \in S
-    /\ \A vt2 \in S : vt2.round <= vt.round
-
-\* A maximal element in the set S, if such exists, and otherwise the default value provided:
-MaxVote(S, default) ==
-    IF \E e \in S : MaximalVote(e, S)
-    THEN CHOOSE e \in S : MaximalVote(e, S)
-    ELSE default
-
 \* We now specify the behaviors of the algorithm:
 
 VARIABLES 
@@ -61,7 +49,7 @@ Init ==
     /\ proposed = FALSE
     /\ proposal = CHOOSE v \in V : TRUE
     \* TODO: allow -1 to not have a good round
-    /\ goodRound \in Round \* \cup {-1} \* we "guess" the good round
+    /\ goodRound \in Round \cup {-1} \* we "guess" the good round
 
 TypeOK ==
     /\ votes \in [P -> SUBSET Vote]
@@ -280,14 +268,57 @@ VotesSafe_ == TypeOK /\ Invariant1 /\ VotesSafe
 
 Invariant ==
     /\  VotesSafe
-    \* /\  Safety
+    /\  Safety
 Invariant_ == TypeOK /\ Invariant1 /\ Invariant
 
 \* Now liveness!
 
 Max(S) == CHOOSE x \in S : \A y \in S : x >= y
 
-LivenessInvariant1 == goodRound > -1 /\ proposed =>
+(******************************************************)
+(* Next we show that the good round eventually starts *)
+(******************************************************)
+LivenessInvariant2 == goodRound > -1 =>
+    /\ \A p \in P \ Byz : 
+        /\  round[p] <= goodRound
+        /\  \A vt \in votes[p] : vt.round <= goodRound
+    /\  goodRound > -1 => \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
+LivenessInvariant2_ ==
+    /\  TypeOK
+    /\  LivenessInvariant2
+
+(*********************************************************************)
+(* Next we show that a proposal is eventually made in the good round *)
+(*********************************************************************)
+LivenessInvariant3Aux ==
+    \* ClaimsSafeAt is monotonic, so:
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
+             vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
+                \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed
+LivenessInvariant3Aux_ ==
+    /\  TypeOK
+    /\  LivenessInvariant3Aux
+    /\  OneValuePerPhasePerRound
+    /\  VoteHasQuorumInPreviousPhase
+    
+LivenessInvariant3 == 
+    /\  goodRound > -1 /\ (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
+LivenessInvariant3_ ==
+    /\  TypeOK
+    /\  OneValuePerPhasePerRound
+    /\  VoteHasQuorumInPreviousPhase
+    /\  LivenessInvariant3
+    /\  LivenessInvariant3Aux
+
+(*********************************************************************************)
+(* Next we show that that votes-1 are eventually cast in the good round.         *)
+(*                                                                               *)
+(* For this we start with the key property of proposals, which guarantees that a *)
+(* proposal made by a well-behaved leader is accepted by all well-behaved        *)
+(* processes                                                                     *)
+(*********************************************************************************)
+ProposalProperty == goodRound > -1 /\ proposed =>
     \/  goodRound = 0
     \/  \E Q \in Quorum :
         /\ \A p \in Q \ Byz : round[p] = goodRound
@@ -300,7 +331,7 @@ LivenessInvariant1 == goodRound > -1 /\ proposed =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
                 /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
-LivenessInvariant1_ == 
+ProposalProperty_ == 
     /\  TypeOK
     /\ \A p \in P \ Byz :
         /\  round[p] <= goodRound
@@ -308,30 +339,73 @@ LivenessInvariant1_ ==
     /\  \E Q \in Quorum : Byz = P \ Q
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
-    /\  LivenessInvariant1
+    /\  ProposalProperty
 
-LivenessInvariant2 ==
-    goodRound > -1 =>
-        \A p \in P \ Byz : 
-            /\  proposed
-            /\  (\A p2 \in P \ Byz : round[p2] = goodRound)
-            /\  (\neg Vote1_ENABLED(p, proposal, goodRound))
-            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 1
-LivenessInvariant2_ ==
-    /\ TypeOK
-    /\ LivenessInvariant1
-    /\ \E Q \in Quorum : Byz = P \ Q
-    /\  OneValuePerPhasePerRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
-             vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
-                \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed
+LivenessInvariant4Aux ==
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
     /\  goodRound > -1 =>
         /\ \A p \in P \ Byz :
             /\  round[p] <= goodRound
             /\  \A vt \in votes[p] : vt.round <= goodRound
-        \* /\  \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
-        \* /\  (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
+LivenessInvariant4Aux_ ==
+    /\  TypeOK
+    /\  LivenessInvariant4Aux
+    /\  ProposalProperty
+    /\  OneValuePerPhasePerRound
+    /\  VoteHasQuorumInPreviousPhase
+    /\  NoFutureVote
+
+LivenessInvariant4 == goodRound > -1 =>
+    /\ \A p \in P \ Byz :
+        /\  proposed
+        /\  \A p2 \in P \ Byz : round[p2] = goodRound
+        /\  \neg Vote1_ENABLED(p, proposal, goodRound)
+        =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 1 /\ vt.value = proposal
+LivenessInvariant4_ ==
+    /\  TypeOK
+    /\  ProposalProperty
+    /\  OneValuePerPhasePerRound
+    /\  VoteHasQuorumInPreviousPhase
+    /\  NoFutureVote
+    /\  LivenessInvariant4Aux
+    /\  LivenessInvariant4
+
+(****************************************************************************)
+(* Next we show that that votes-2,3,4 are eventually cast in the good round *)
+(****************************************************************************)
+LivenessInvariant5 ==
+    /\ \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
+    /\ goodRound > -1 =>
+        /\ \A p \in P \ Byz :
+            /\ \A p2 \in P \ Byz :
+                /\ round[p2] = goodRound
+                /\ \E vt \in votes[p2] : vt.round = goodRound /\ vt.phase = 1 /\ vt.value = proposal
+            /\ \neg Vote2_ENABLED(p, proposal, goodRound)
+            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 2 /\ vt.value = proposal
+        /\ \A p \in P \ Byz :
+            /\ \A p2 \in P \ Byz :
+                /\ round[p2] = goodRound
+                /\ \E vt \in votes[p2] : vt.round = goodRound /\ vt.phase = 2 /\ vt.value = proposal
+            /\ \neg Vote3_ENABLED(p, proposal, goodRound)
+            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 3 /\ vt.value = proposal
+        /\ \A p \in P \ Byz :
+            /\ \A p2 \in P \ Byz :
+                /\ round[p2] = goodRound
+                /\ \E vt \in votes[p2] : vt.round = goodRound /\ vt.phase = 3 /\ vt.value = proposal
+            /\ \neg Vote4_ENABLED(p, proposal, goodRound)
+            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 4 /\ vt.value = proposal
+LivenessInvariant5_ ==
+    /\  TypeOK
+    /\  LivenessInvariant5
+
+(**********************************)
+(* Finally, we complete the proof *)
+(**********************************)
+Liveness_ante ==
+    /\  TypeOK
+    /\  LivenessInvariant2
+    /\  LivenessInvariant3
+    /\  LivenessInvariant4
+    /\  LivenessInvariant5
 
 =============================================================================
