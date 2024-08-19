@@ -8,7 +8,8 @@
 (********************************************************************************)
 
 \* TODO: how do we check the relevant actions do not remain enabled forever?
-\* If it was receiving a message, we could argue we use a template that guarantees it by construction (e.g. can't receive the same message twice).
+\* If it was receiving a message, we could argue we use a template that guarantees it by construction (e.g. can't receive the same message twice)
+\* We can check that taking an enabled action always disables it.
 
 EXTENDS Integers
 
@@ -129,7 +130,6 @@ Invariant ==
 Invariant_ == Invariant
 
 \* NOTE: TLC can handle ENABLED, but not Apalache
-\* TODO: What if actions remain enabled forever?
 Liveness ==
     (/\ goodBallot > -1
      /\ \A a \in Acceptor, b \in Ballot, v \in Value :
