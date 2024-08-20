@@ -94,6 +94,10 @@ Next  ==  \E a \in Acceptor, b \in Ballot, v \in Value :
 
 Spec == Init /\ [][Next]_vars
 
+(****************************************************************************)
+(* We now give an inductive invariant that implies the consistency property *)
+(****************************************************************************)
+
 ProposalsSafe == \A b \in Ballot, v \in Value :
     <<b, v>> \in proposals => SafeAt(b, v)
 
@@ -121,9 +125,16 @@ ConsistencyInvariant ==
 THEOREM Spec => []ConsistencyInvariant
 THEOREM ConsistencyInvariant => Consistency
 
-\* Liveness proof
+(***********************************************************************************)
+(* We now give a proof of liveness. For this we show that, if there is a good      *)
+(* ballot and we exhaust the all enabed actions, then a decision is made. In a     *)
+(* separate file we check that all the actions are self-disabling. Since there are *)
+(* a finite number of actions, this show, under fair scheduling, we eventually get *)
+(* a decision.                                                                     *)
+(***********************************************************************************)
 
-\* NOTE: TLC can handle ENABLED, but not Apalache, so we do it by hand:
+\* First we provide handwritten version of the enabling conditions of the actions we care about.
+\* This is because Apalache does not support the ENABLED operator.
 
 Propose_ENABLED(b, v) ==
     /\ \A prop \in proposals : prop[1] # b
@@ -140,7 +151,7 @@ VoteFor_ENABLED(a, b, v) ==
     /\ \A vt \in votes[a] : vt[1] # b
     /\ <<b,v>> \in proposals
 
-\* Check this with TLC to catch potential errors in the manual encoding of ENABLED predicates:
+\* Check this with TLC to catch potential errors in the ENABLED predicates:
 ENABLED_OK ==
     \A a \in Acceptor, b \in Ballot, v \in Value :
         /\ IncreaseCurrBal_ENABLED(a, b) = ENABLED IncreaseCurrBal(a, b)

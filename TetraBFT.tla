@@ -175,7 +175,7 @@ NextNoByz ==
 
 Spec == Init /\ [][Next]_vars
 
-Safety == \A v1,v2 \in decided : v1 = v2
+Consistency == \A v1,v2 \in decided : v1 = v2
 
 \* Manual encoding of ENABLED for Apalache:
 
@@ -259,7 +259,7 @@ SafeAt(r, v) == \A c \in Round : 0 <= c /\ c < r => NoneOtherChoosableAt(c, v)
 VotesSafe == \A p \in P \ Byz : \A vt \in votes[p] :
     SafeAt(vt.round, vt.value)
 
-SafetyInvariant ==
+ConsistencyInvariant ==
     /\  TypeOK
     /\  NoFutureVote
     /\  OneValuePerPhasePerRound
@@ -267,36 +267,46 @@ SafetyInvariant ==
     /\  \E Q \in Quorum : Byz = P \ Q
     /\  VotesSafe
 
-THEOREM Spec => []SafetyInvariant
-THEOREM SafetyInvariant => Safety
+THEOREM Spec => []ConsistencyInvariant
+THEOREM ConsistencyInvariant => Consistency
 
-\* Liveness proof
+(***********************************************************************************)
+(* We now give a proof of liveness. For this we show that, if there is a good      *)
+(* ballot and we exhaust the all enabed actions, then a decision is made. In a     *)
+(* separate file we check that all the actions are self-disabling. Since there are *)
+(* a finite number of actions, this show, under fair scheduling, we eventually get *)
+(* a decision.                                                                     *)
+(***********************************************************************************)
 
-(*********************************************************************************)
-(* Next we show that that votes-1 are eventually cast in the good round.         *)
-(*                                                                               *)
-(* For this we start with the key property of proposals, which guarantees that a *)
-(* proposal made by a well-behaved leader is accepted by all well-behaved        *)
-(* processes                                                                     *)
-(*********************************************************************************)
+(**********************************************************************************)
+(* Liveness hinges on two key facts.                                              *)
+(*                                                                                *)
+(* First, that once a node claims that something is safe, it never ceases to do   *)
+(* so. This means that a vote-i from a well-behaved node can always be shown safe *)
+(* using vote-(i-1) messages.                                                     *)
+(*                                                                                *)
+(* Second, that a proposal satisfies all the properties needed in order to be     *)
+(* accepted by all well-behaved nodes.                                            *)
+(**********************************************************************************)
+
+ClaimsSafeAtMonotonic ==
+    \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
+        vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
+            \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
+
 ProposalProperty == goodRound > -1 /\ proposed =>
     \/  goodRound = 0
     \/  \E Q \in Quorum :
         /\ \A p \in Q \ Byz : round[p] = goodRound
-        /\  \* no member voted in phase 3 before round goodRound
+        /\  \* either no member voted in phase 3 before round goodRound
             \/ \A p \in Q \ Byz : \A vt \in votes[p] : \neg (vt.phase = 3 /\ vt.round < goodRound)
-            \* highest ...
+            \* or its the latest vote-3 of a quorum and it's claimed vote-2-safe by a well-behaved node
             \/ \E r \in Round :
                 /\ 0 <= r /\ r < goodRound
                 /\ \A p \in Q \ Byz : \A vt \in votes[p] : vt.phase = 3 /\ vt.round < goodRound =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
                 /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2) \* this in turn implies there is a blocking set claiming it's safe with phase-1 votes
-
-ClaimsSafeAtMonotonic ==
-    \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
-        vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
-            \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
 
 \* Basic invariants:
 LivenessAuxiliaryInvariants == 

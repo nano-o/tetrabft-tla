@@ -17,19 +17,21 @@ $(TLC_JAR):
 # Don't redownload stuff every time
 .PRECIOUS: $(APA) $(TLC_JAR)
 
-safety: $(APA) TetraBFT.tla ApaTetraBFT.tla
-	APA=$(APA) ./check.sh -inductive Invariant1 TetraBFT
-	APA=$(APA) ./check.sh -inductive SafetyInvariant TetraBFT
+tetrabft-safety: $(APA) TetraBFT.tla ApaTetraBFT.tla
+	APA=$(APA) ./check.sh -inductive ConsistencyInvariant TetraBFT
+	APA=$(APA) ./check.sh -implication ConsistencyInvariant Consistency TetraBFT
 
-liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla
-	# java -XX:+UseParallelGC -jar tla2tools.jar -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
-	# APA=$(APA) ./check.sh -inductive ProposalPropertyInvariant TetraBFT
-	APA=$(APA) ./check.sh -implication Liveness_ante Liveness TetraBFT
+tetrabft-liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla ${TLC_JAR} TLCTetraBFT.cfg TLCTetraBFT.tla
+	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
+	APA=$(APA) ./check.sh -inductive LivenessInvariant TetraBFT
+	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness TetraBFT
 
-paxos: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR}
+paxos-safety: $(APA) Paxos.tla ApaPaxos.tla
 	APA=$(APA) ./check.sh -inductive ConsistencyInvariant Paxos
 	APA=$(APA) ./check.sh -implication ConsistencyInvariant Consistency Paxos
-	java -XX:+UseParallelGC -jar tla2tools.jar -config TLCPaxos.cfg -workers 4 TLCPaxos.tla
+
+paxos-liveness: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR} TLCPaxos.cfg TLCPaxos.tla
+	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCPaxos.cfg -workers 4 TLCPaxos.tla
 	APA=$(APA) ./check.sh -inductive LivenessInvariant Paxos
 	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
 
