@@ -1,7 +1,9 @@
 #!/bin/bash
 
-set -e
-set -x
+# Script to invoke Apalache
+# For induction checks, the convention is that the provided invariant, e.g. "Inv", is checked inductive relative to "Inv_" (that's the name of the invariant with an underscore at the end).
+
+set -ex
 
 case "$1" in
     -typecheck)
@@ -22,7 +24,7 @@ case "$1" in
         ;;
     -implication)
         shift
-        FILE="Apa${2}.tla"
-        $APA/bin/apalache-mc check --tuning-options=search.invariant.mode=after --init="${1}_ante" --inv=$1 --length=0 $FILE
+        FILE="Apa${3}.tla"
+        $APA/bin/apalache-mc check --tuning-options=search.invariant.mode=after --init="$1" --inv=$2 --length=0 $FILE
         ;;
 esac

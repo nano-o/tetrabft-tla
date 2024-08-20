@@ -125,14 +125,13 @@ NoVoteAfterCurrBal == \A a \in Acceptor, b \in Ballot, v \in Value :
 
 Consistency == \A v,w \in chosen : v = w
 
-\* This invariant is inductive and establishes consistency:
+\* This invariant is inductive, and it implies consistency:
 Invariant ==
   /\ TypeOK
   /\ VoteForProposal
   /\ OneValuePerBallot
   /\ NoVoteAfterCurrBal
   /\ ProposalsSafe
-  /\ Consistency
 Invariant_ == Invariant
 
 \* NOTE: TLC can handle ENABLED, but not Apalache
@@ -155,7 +154,7 @@ NothingAfterGoodBallot == goodBallot > -1 =>
     \A a \in Acceptor, b \in Ballot, v \in Value :
         VotedFor(a, b, v) \/ <<b,v>> \in proposals \/ b = currBal[a] => b <= goodBallot
 
-\* Supporting invariant for liveness:
+\* This invariant is inductive, and it implies liveness:
 LivenessInvariant ==
     /\  TypeOK
     /\  VoteForProposal
@@ -163,9 +162,6 @@ LivenessInvariant ==
     /\  NothingAfterGoodBallot
     /\  \E Q \in Quorum : Q \cap crashed = {}
 LivenessInvariant_ == LivenessInvariant
-
-Liveness_ ==
-    LivenessInvariant
     
 Canary1 == \neg (
     \A a \in Acceptor, b \in Ballot, v \in Value :
@@ -174,9 +170,9 @@ Canary1 == \neg (
         /\ \neg Propose_ENABLED(b, v)
 )
 
-\* Now let's try with temporal logic:
+\* This is what we would do using temporal logic and TLC:
 
-RealLiveness == [](goodBallot > -1 => <>(chosen # {}))
+RealLiveness == goodBallot > -1 => <>(chosen # {})
 
 LiveSpec == 
     /\  Init

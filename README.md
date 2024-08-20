@@ -1,5 +1,12 @@
-This repository contains the TLA+ specification of TetraBFT. For more information about TetraBFT, see our [PODC paper](https://dl.acm.org/doi/abs/10.1145/3662158.3662783).
+This repository contains the TLA+ specification of TetraBFT, as well as evidence for its correctness in the form of inductive invariants, showing both safety and liveness, verified by model-checking for small system sizes.
+For more information about TetraBFT, see our [PODC paper](https://dl.acm.org/doi/abs/10.1145/3662158.3662783) and its [extended version](https://arxiv.org/abs/2405.02615).
 
-On Linux, to check that the provided invariant is inductive, run `make check`. This uses the [Apalache](https://github.com/informalsystems/apalache) model-checker to exhaustively check that the main invariant is inductive for a fixed system size and a maximum number of rounds.
+To check the safety of TetraBFT, run `make safety`. This uses the [Apalache](https://github.com/informalsystems/apalache) model-checker to exhaustively check that an invariant implying safety is inductive.
+For this check, the size of the system and maximum number of rounds are fixed to the values appearing in [ApaTetraBFT.tla](./ApaTetraBFT.tla).
+Depending on your hardware configuration, model-checking might take a lot of time.
+To speed things up, you can for example reduce the number of rounds explored by setting `MaxRound == 1` (so only rounds 0 and 1 will be considered) in [ApaTetraBFT.tla](./ApaTetraBFT.tla).
 
-Depending on your hardware configuration, model-checking might take a lot of time. `ApaVoting.tla` fixes values for e.g. the set of processes or the maximum number of rounds to explore during model-checking. For example, setting `MaxRound == 1` should speed things up because it means that the model-checker will only explore rounds 0 and 1.
+TODO: explain liveness.
+
+Finally, for didactic purposes, we apply the same verification techniques to the specification of Paxos found in [Paxos.tla](./Paxos.tla).
+To check it, run `make paxos`.

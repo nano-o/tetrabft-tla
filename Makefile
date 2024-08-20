@@ -12,7 +12,13 @@ $(APA):
 # Don't redownload stuff every time
 .PRECIOUS: $(APA)
 
-check: $(APA) TetraBFT.tla ApaTetraBFT.tla
+safety: $(APA) TetraBFT.tla ApaTetraBFT.tla
 	APA=$(APA) ./check.sh -inductive Invariant TetraBFT
 
-.PHONY: check
+paxos: $(APA) Paxos.tla ApaPaxos.tla
+	APA=$(APA) ./check.sh -inductive Invariant Paxos
+	APA=$(APA) ./check.sh -implication Invariant Consistency Paxos
+	APA=$(APA) ./check.sh -inductive LivenessInvariant Paxos
+	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
+
+.PHONY: safety

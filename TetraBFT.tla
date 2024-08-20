@@ -17,7 +17,6 @@ CONSTANTS
 ,   Blocking \* the set of blocking sets (typically sets of f+1 nodes out of 3f+1)
 ,   FailProneSets \* the set of fail-prone sets
 ,   Round \* the set of rounds
-,   Byz \* the set of Byzantine processes
 
 ASSUME
     /\  \A F \in FailProneSets : \E Q \in Quorum : Q \subseteq P \ F
@@ -33,30 +32,29 @@ NotAVote == [round |-> -1, phase |-> 1, value |-> CHOOSE v \in V : TRUE]
 
 \* We now specify the behaviors of the algorithm:
 
-VARIABLES 
-    \* Byz, \* Byz is the set of Byzantine processes
+VARIABLES
+    Byz, \* Byz is the set of Byzantine processes, chosen arbitrarily at initialization
     votes,
     round,
     proposed, \* whether a proposal has been made in the good round
     proposal, \* the good-round proposal
     goodRound \* the round that lasts long enough
-vars == <<round, votes, proposed, proposal, goodRound>>
+vars == <<round, votes, proposed, proposal, goodRound, Byz>>
 
 Init ==
     /\ votes = [p \in P |-> {}]
     /\ round = [p \in P |-> -1]
-    \* /\ Byz \in FailProneSets
+    /\ Byz \in FailProneSets
     /\ proposed = FALSE
     /\ proposal = CHOOSE v \in V : TRUE
-    \* TODO: allow -1 to not have a good round
-    /\ goodRound \in Round \cup {-1} \* we "guess" the good round
+    /\ goodRound \in Round \cup {-1}
 
 TypeOK ==
     /\ votes \in [P -> SUBSET Vote]
     /\ round \in [P -> Round \cup {-1}]
     /\ proposed \in BOOLEAN
     /\ proposal \in V
-    \* /\ Byz \in SUBSET P
+    /\ Byz \in FailProneSets
     /\ goodRound \in Round \cup {-1}
 TypeOK_ == TypeOK
 
@@ -102,7 +100,7 @@ StartRound(p, r) ==
     /\  goodRound > -1 => r <= goodRound \* a good round lasts "long enough", i.e. forever
     /\  round[p] < r
     /\  round' = [round EXCEPT ![p] = r]
-    /\  UNCHANGED <<votes, proposed, proposal, goodRound>>
+    /\  UNCHANGED <<votes, proposed, proposal, goodRound, Byz>>
 
 Propose(v) ==
     /\  goodRound > -1
@@ -110,7 +108,7 @@ Propose(v) ==
     /\  \E Q \in Quorum : ShowsSafeAt(Q, v, goodRound, 3, 2)
     /\  proposed' = TRUE
     /\  proposal' = v
-    /\  UNCHANGED <<votes, round, goodRound>>
+    /\  UNCHANGED <<votes, round, goodRound, Byz>>
 
 Vote1(p, v, r) ==
     /\ p \notin Byz
@@ -118,7 +116,7 @@ Vote1(p, v, r) ==
     /\ r = goodRound => proposed /\ v = proposal
     /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
     /\ DoVote(p, v, r, 1)
-    /\ UNCHANGED <<round, proposed, proposal, goodRound>>
+    /\ UNCHANGED <<round, proposed, proposal, goodRound, Byz>>
 
 \* whether v has been voted for by a quorum in phase `phase' of round `r':
 Accepted(p, v, r, phase) == \E Q \in Quorum :
@@ -130,7 +128,7 @@ Vote2(p, v, r) ==
     /\ Accepted(p, v, r, 1)
     /\ DoVote(p, v, r, 2)
     /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<proposed, proposal, goodRound>>
+    /\ UNCHANGED <<proposed, proposal, goodRound, Byz>>
 
 Vote3(p, v, r) ==
     /\ p \notin Byz
@@ -138,7 +136,7 @@ Vote3(p, v, r) ==
     /\ Accepted(p, v, r, 2)
     /\ DoVote(p, v, r, 3)
     /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<proposed, proposal, goodRound>>
+    /\ UNCHANGED <<proposed, proposal, goodRound, Byz>>
 
 Vote4(p, v, r) ==
     /\ p \notin Byz
@@ -146,7 +144,7 @@ Vote4(p, v, r) ==
     /\ Accepted(p, v, r, 3)
     /\ DoVote(p, v, r, 4)
     /\ round' = [round EXCEPT ![p] = r]
-    /\ UNCHANGED <<proposed, proposal, goodRound>>
+    /\ UNCHANGED <<proposed, proposal, goodRound, Byz>>
 
 \* This models malicious behavior
 \* ByzantineHavoc ==
@@ -158,7 +156,7 @@ ByzantineHavoc ==
     /\  \E p \in Byz :
             /\  \E new_votes \in SUBSET Vote : votes' = [votes EXCEPT ![p] = new_votes]
             /\  \E new_round \in Round : round' = [round EXCEPT ![p] = new_round]
-    /\  UNCHANGED <<proposed, proposal, goodRound>>
+    /\  UNCHANGED <<proposed, proposal, goodRound, Byz>>
 
 Next ==
     \E p \in P, v \in V, r \in Round :
@@ -187,13 +185,13 @@ Vote1_ENABLED(p, v, r) ==
     /\ r = round[p]
     /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
     /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # 1
-    
+
 Vote2_ENABLED(p, v, r) ==
     /\ p \notin Byz
     /\ r = round[p]
     /\ Accepted(p, v, r, 1)
     /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # 2
-    
+
 Vote3_ENABLED(p, v, r) ==
     /\ p \notin Byz
     /\ r = round[p]
@@ -206,7 +204,7 @@ Vote4_ENABLED(p, v, r) ==
     /\ Accepted(p, v, r, 3)
     /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # 4
 
-StartRound_ENABLED(p, r) == 
+StartRound_ENABLED(p, r) ==
     /\  p \notin Byz
     /\  goodRound > -1 => r <= goodRound
     /\  round[p] < r
@@ -272,6 +270,7 @@ Invariant ==
 Invariant_ == TypeOK /\ Invariant1 /\ Invariant
 
 \* Now liveness!
+\* TODO: are the "\neg XX_ENABLED => ... " invariants more than redundant tautologies?
 
 Max(S) == CHOOSE x \in S : \A y \in S : x >= y
 
@@ -279,7 +278,7 @@ Max(S) == CHOOSE x \in S : \A y \in S : x >= y
 (* Next we show that the good round eventually starts *)
 (******************************************************)
 LivenessInvariant2 == goodRound > -1 =>
-    /\ \A p \in P \ Byz : 
+    /\ \A p \in P \ Byz :
         /\  round[p] <= goodRound
         /\  \A vt \in votes[p] : vt.round <= goodRound
     /\  goodRound > -1 => \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
@@ -301,8 +300,8 @@ LivenessInvariant3Aux_ ==
     /\  LivenessInvariant3Aux
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
-    
-LivenessInvariant3 == 
+
+LivenessInvariant3 ==
     /\  goodRound > -1 /\ (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
 LivenessInvariant3_ ==
     /\  TypeOK
@@ -331,7 +330,7 @@ ProposalProperty == goodRound > -1 /\ proposed =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
                 /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
-ProposalProperty_ == 
+ProposalProperty_ ==
     /\  TypeOK
     /\ \A p \in P \ Byz :
         /\  round[p] <= goodRound
