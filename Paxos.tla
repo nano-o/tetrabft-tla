@@ -1,5 +1,7 @@
 ------------------------------- MODULE Paxos -------------------------------
 
+\* TODO check that actions are self-disabling
+
 EXTENDS Integers
 
 CONSTANTS
