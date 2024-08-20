@@ -6,7 +6,7 @@
 (* Byzantine failures.                                                           *)
 (*********************************************************************************)
 
-\* WIP: liveness
+\* TODO: check that actions are self-disabling
 
 EXTENDS Integers
 
@@ -167,6 +167,16 @@ Next ==
         \/ Vote4(p, v, r)
         \/ StartRound(p, r)
         \/ Propose(v)
+        
+\* For TLC:
+NextNoByz ==
+    \E p \in P, v \in V, r \in Round :
+        \/ Vote1(p, v, r)
+        \/ Vote2(p, v, r)
+        \/ Vote3(p, v, r)
+        \/ Vote4(p, v, r)
+        \/ StartRound(p, r)
+        \/ Propose(v)
 
 Spec == Init /\ [][Next]_vars
 
@@ -262,17 +272,15 @@ SafeAt(r, v) == \A c \in Round : 0 <= c /\ c < r => NoneOtherChoosableAt(c, v)
 
 VotesSafe == \A p \in P \ Byz : \A vt \in votes[p] :
     SafeAt(vt.round, vt.value)
-VotesSafe_ == TypeOK /\ Invariant1 /\ VotesSafe
 
-Invariant ==
-    /\  VotesSafe
-    /\  Safety
-Invariant_ == TypeOK /\ Invariant1 /\ Invariant
+SafetyInvariant == Invariant1 /\ VotesSafe
+SafetyInvariant_ == TypeOK /\ Invariant1 /\ VotesSafe
 
 \* Now liveness!
 \* TODO: are the "\neg XX_ENABLED => ... " invariants more than redundant tautologies?
 
 Max(S) == CHOOSE x \in S : \A y \in S : x >= y
+
 
 (******************************************************)
 (* Next we show that the good round eventually starts *)
@@ -330,9 +338,9 @@ ProposalProperty == goodRound > -1 /\ proposed =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
                 /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
-ProposalProperty_ ==
+ProposalPropertyInvariant ==
     /\  TypeOK
-    /\ \A p \in P \ Byz :
+    /\  goodRound > -1 => \A p \in P \ Byz :
         /\  round[p] <= goodRound
         /\  \A vt \in votes[p] : vt.round <= goodRound
     /\  \E Q \in Quorum : Byz = P \ Q
@@ -397,14 +405,31 @@ LivenessInvariant5_ ==
     /\  TypeOK
     /\  LivenessInvariant5
 
+LivenessInvariant ==
+    /\  TypeOK
+    \* First some basic properties:
+    /\  \E Q \in Quorum : Byz = P \ Q
+    /\  OneValuePerPhasePerRound
+    /\  VoteHasQuorumInPreviousPhase
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
+    /\  goodRound > -1 =>
+        \A p \in P \ Byz :
+            /\  round[p] <= goodRound
+            /\  \A vt \in votes[p] : vt.round <= goodRound
+    \* ClaimsSafeAt is monotonic:
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
+            vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
+                \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
+    \* The most interesting part:
+    /\  ProposalProperty
+    
+LivenessInvariant_ == TypeOK /\ LivenessInvariant
+
 (**********************************)
 (* Finally, we complete the proof *)
 (**********************************)
 Liveness_ante ==
     /\  TypeOK
-    /\  LivenessInvariant2
-    /\  LivenessInvariant3
-    /\  LivenessInvariant4
-    /\  LivenessInvariant5
+    /\  LivenessInvariant
 
 =============================================================================

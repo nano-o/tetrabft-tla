@@ -18,7 +18,13 @@ $(TLC_JAR):
 .PRECIOUS: $(APA) $(TLC_JAR)
 
 safety: $(APA) TetraBFT.tla ApaTetraBFT.tla
-	APA=$(APA) ./check.sh -inductive Invariant TetraBFT
+	APA=$(APA) ./check.sh -inductive Invariant1 TetraBFT
+	APA=$(APA) ./check.sh -inductive SafetyInvariant TetraBFT
+
+liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla
+	# java -XX:+UseParallelGC -jar tla2tools.jar -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
+	# APA=$(APA) ./check.sh -inductive ProposalPropertyInvariant TetraBFT
+	APA=$(APA) ./check.sh -implication Liveness_ante Liveness TetraBFT
 
 paxos: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR}
 	APA=$(APA) ./check.sh -inductive Invariant Paxos

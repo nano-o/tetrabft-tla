@@ -10,3 +10,5 @@ TODO: explain liveness.
 
 Finally, for didactic purposes, we apply the same verification techniques to the specification of Paxos found in [Paxos.tla](./Paxos.tla).
 To check it, run `make paxos`.
+
+If you want to modify things and play around, use [show_cti.sh](./show_cti.sh) to print the latest counterexample to induction found by Apalache.
