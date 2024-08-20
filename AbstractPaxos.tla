@@ -4,12 +4,9 @@
 (* Now let's tackle liveness. We will non-deterministically, irrevocably block  *)
 (* starting new ballots in order to model a ballot lasting long enough. Then we *)
 (* will show that, when no transitions are enabled anymore, we have a chosen    *)
-(* value.                                                                       *)
+(* value. We will also show that every action disables itself (in a separate    *)
+(* module).                                                                     *)
 (********************************************************************************)
-
-\* TODO: how do we check the relevant actions do not remain enabled forever?
-\* If it was receiving a message, we could argue we use a template that guarantees it by construction (e.g. can't receive the same message twice)
-\* We can check that taking an enabled action always disables it.
 
 EXTENDS Integers
 
