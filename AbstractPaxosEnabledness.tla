@@ -19,7 +19,6 @@ VARIABLES
     voteFor,
     increaseMaxBal
 
-
 vars == <<votes, maxBal, crashed, goodBallot, voteFor, increaseMaxBal>>
 
 TypeOK ==
@@ -61,7 +60,6 @@ IncreaseMaxBal(a, b) ==
   /\ goodBallot > -1 => b <= goodBallot
   /\ b > maxBal[a]
   /\ maxBal' = [maxBal EXCEPT ![a] = b]
-\*   /\ increaseMaxBal' = [increaseMaxBal EXCEPT ![a] = [c \in Ballot |-> IF c = b THEN TRUE ELSE increaseMaxBal[a][c]]]
   /\ increaseMaxBal' = [increaseMaxBal EXCEPT ![<<a,b>>] = TRUE]
   /\ UNCHANGED <<votes, crashed, goodBallot, voteFor>>
 

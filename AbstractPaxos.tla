@@ -155,7 +155,7 @@ LivenessInvariant ==
     /\  goodBallot > -1 =>
         /\  \A a \in Acceptor :
             /\  (\A b \in Ballot : \neg IncreaseMaxBal_ENABLED(a, b)) =>
-                    \/  a \in crashed 
+                    \/  a \in crashed
                     \/  maxBal[a] = goodBallot
             /\  \A b \in Ballot :
                     (maxBal[a] <= b /\ (\A v \in Value : \neg VoteFor_ENABLED(a, b, v))) =>
