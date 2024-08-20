@@ -69,10 +69,6 @@ Propose(b, v) ==
     /\  proposals' = proposals \cup {<<b,v>>}
     /\  UNCHANGED <<votes, currBal, crashed, goodBallot>>
 
-Propose_ENABLED(b, v) ==
-    /\ \A prop \in proposals : prop[1] # b
-    /\ \E Q \in Quorum : ShowsSafeAt(Q, b, v)
-
 IncreaseCurrBal(a, b) ==
   /\ a \notin crashed
   \* once a good ballot started, we cannot increase currBal beyond it:
@@ -80,11 +76,6 @@ IncreaseCurrBal(a, b) ==
   /\ b > currBal[a]
   /\ currBal' = [currBal EXCEPT ![a] = b]
   /\ UNCHANGED <<votes, proposals, crashed, goodBallot>>
-
-IncreaseCurrBal_ENABLED(a, b) ==
-  /\ a \notin crashed
-  /\ goodBallot > -1 => b <= goodBallot
-  /\ b > currBal[a]
 
 VoteFor(a, b, v) ==
     /\ a \notin crashed
@@ -94,12 +85,6 @@ VoteFor(a, b, v) ==
     /\ votes' = [votes EXCEPT ![a] = @ \cup {<<b, v>>}]
     /\ currBal' = [currBal EXCEPT ![a] = b]
     /\ UNCHANGED <<crashed, proposals, goodBallot>>
-
-VoteFor_ENABLED(a, b, v) ==
-    /\ a \notin crashed
-    /\ currBal[a] \leq b
-    /\ \A vt \in votes[a] : vt[1] # b
-    /\ <<b,v>> \in proposals
 
 Next  ==  \E a \in Acceptor, b \in Ballot, v \in Value :
     \/ IncreaseCurrBal(a, b)
@@ -126,15 +111,43 @@ NoVoteAfterCurrBal == \A a \in Acceptor, b \in Ballot, v \in Value :
 Consistency == \A v,w \in chosen : v = w
 
 \* This invariant is inductive, and it implies consistency:
-Invariant ==
+ConsistencyInvariant ==
   /\ TypeOK
   /\ VoteForProposal
   /\ OneValuePerBallot
   /\ NoVoteAfterCurrBal
   /\ ProposalsSafe
-Invariant_ == Invariant
 
-\* NOTE: TLC can handle ENABLED, but not Apalache
+THEOREM Spec => []ConsistencyInvariant
+THEOREM ConsistencyInvariant => Consistency
+
+\* Liveness proof
+
+\* NOTE: TLC can handle ENABLED, but not Apalache, so we do it by hand:
+
+Propose_ENABLED(b, v) ==
+    /\ \A prop \in proposals : prop[1] # b
+    /\ \E Q \in Quorum : ShowsSafeAt(Q, b, v)
+
+IncreaseCurrBal_ENABLED(a, b) ==
+  /\ a \notin crashed
+  /\ goodBallot > -1 => b <= goodBallot
+  /\ b > currBal[a]
+
+VoteFor_ENABLED(a, b, v) ==
+    /\ a \notin crashed
+    /\ currBal[a] \leq b
+    /\ \A vt \in votes[a] : vt[1] # b
+    /\ <<b,v>> \in proposals
+
+\* Check this with TLC to catch potential errors in the manual encoding of ENABLED predicates:
+ENABLED_OK ==
+    \A a \in Acceptor, b \in Ballot, v \in Value :
+        /\ IncreaseCurrBal_ENABLED(a, b) = ENABLED IncreaseCurrBal(a, b)
+        /\ VoteFor_ENABLED(a, b, v) = ENABLED VoteFor(a, b, v)
+        /\ Propose_ENABLED(b, v) = ENABLED Propose(b, v)
+
+\* The liveness property (not that we additionally need to check that the actions are self-disabling):
 Liveness ==
     (/\ goodBallot > -1
      /\ \A a \in Acceptor, b \in Ballot, v \in Value :
@@ -143,12 +156,7 @@ Liveness ==
         /\ \neg Propose_ENABLED(b, v))
     => chosen # {}
 
-\* Check this with TLC to catch potential errors:
-ENABLED_OK ==
-    \A a \in Acceptor, b \in Ballot, v \in Value :
-        /\ IncreaseCurrBal_ENABLED(a, b) = ENABLED IncreaseCurrBal(a, b)
-        /\ VoteFor_ENABLED(a, b, v) = ENABLED VoteFor(a, b, v)
-        /\ Propose_ENABLED(b, v) = ENABLED Propose(b, v)
+\* Next we propose an inductive invariant that implies the liveness property:
 
 NothingAfterGoodBallot == goodBallot > -1 =>
     \A a \in Acceptor, b \in Ballot, v \in Value :
@@ -161,19 +169,13 @@ LivenessInvariant ==
     /\  OneValuePerBallot
     /\  NothingAfterGoodBallot
     /\  \E Q \in Quorum : Q \cap crashed = {}
-LivenessInvariant_ == LivenessInvariant
-    
-Canary1 == \neg (
-    \A a \in Acceptor, b \in Ballot, v \in Value :
-        /\ \neg IncreaseCurrBal_ENABLED(a, b)
-        /\ \neg VoteFor_ENABLED(a, b, v)
-        /\ \neg Propose_ENABLED(b, v)
-)
+
+THEOREM Spec => []LivenessInvariant
+THEOREM LivenessInvariant => Liveness
 
 \* This is what we would do using temporal logic and TLC:
 
-RealLiveness == goodBallot > -1 => <>(chosen # {})
-
+\* First we need to add fairness conditions:
 LiveSpec == 
     /\  Init
     /\  [][Next]_vars
@@ -181,5 +183,9 @@ LiveSpec ==
             /\  WF_vars( IncreaseCurrBal(a, b) )
             /\  WF_vars( VoteFor(a, b, v) )
             /\  WF_vars( Propose(b, v) )
+
+\* Now we can check the following property with TLC:
+RealLiveness == goodBallot > -1 => <>(chosen # {})
+
 
 =====================================================================================

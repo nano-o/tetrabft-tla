@@ -147,11 +147,6 @@ Vote4(p, v, r) ==
     /\ UNCHANGED <<proposed, proposal, goodRound, Byz>>
 
 \* This models malicious behavior
-\* ByzantineHavoc ==
-\*     \E new_votes \in [Byz -> SUBSET Vote] : \E new_round \in [Byz -> Round] :
-\*     /\  votes' = [p \in P |-> IF p \in Byz THEN new_votes[p] ELSE votes[p]]
-\*     /\  round' = [p \in P |-> IF p \in Byz THEN new_round[p] ELSE round[p]]
-\*     /\  UNCHANGED <<Byz, proposal, goodRound>>
 ByzantineHavoc ==
     /\  \E p \in Byz :
             /\  \E new_votes \in SUBSET Vote : votes' = [votes EXCEPT ![p] = new_votes]
@@ -239,7 +234,7 @@ Liveness ==
         /\ \neg StartRound_ENABLED(p, r)
     =>  decided # {}
 
-\* Simple properties
+\* Safety proof
 
 VotedFor(p, r, v) ==  [round |-> r, phase |-> 4, value |-> v] \in votes[p]
 
@@ -251,15 +246,6 @@ OneValuePerPhasePerRound == \A p \in P \ Byz : \A vt \in votes[p] :
 VoteHasQuorumInPreviousPhase == \A p \in P \ Byz : \A vt \in votes[p] : vt.phase > 1 =>
     \E Q \in Quorum : \A q \in Q \ Byz :
         [round |-> vt.round, phase |-> (vt.phase)-1, value |-> vt.value] \in votes[q]
-
-Invariant1 ==
-    /\  NoFutureVote
-    /\  OneValuePerPhasePerRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  \E Q \in Quorum : Byz = P \ Q
-Invariant1_ == TypeOK /\ Invariant1
-
-\* Now the main invariant
 
 DidNotVoteAt(p, r) == \A v \in V : \neg VotedFor(p, r, v)
 
@@ -273,50 +259,18 @@ SafeAt(r, v) == \A c \in Round : 0 <= c /\ c < r => NoneOtherChoosableAt(c, v)
 VotesSafe == \A p \in P \ Byz : \A vt \in votes[p] :
     SafeAt(vt.round, vt.value)
 
-SafetyInvariant == Invariant1 /\ VotesSafe
-SafetyInvariant_ == TypeOK /\ Invariant1 /\ VotesSafe
-
-\* Now liveness!
-\* TODO: are the "\neg XX_ENABLED => ... " invariants more than redundant tautologies?
-
-Max(S) == CHOOSE x \in S : \A y \in S : x >= y
-
-
-(******************************************************)
-(* Next we show that the good round eventually starts *)
-(******************************************************)
-LivenessInvariant2 == goodRound > -1 =>
-    /\ \A p \in P \ Byz :
-        /\  round[p] <= goodRound
-        /\  \A vt \in votes[p] : vt.round <= goodRound
-    /\  goodRound > -1 => \A p \in P \ Byz : \neg StartRound_ENABLED(p, goodRound) => round[p] = goodRound
-LivenessInvariant2_ ==
+SafetyInvariant ==
     /\  TypeOK
-    /\  LivenessInvariant2
-
-(*********************************************************************)
-(* Next we show that a proposal is eventually made in the good round *)
-(*********************************************************************)
-LivenessInvariant3Aux ==
-    \* ClaimsSafeAt is monotonic, so:
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
-             vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
-                \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed
-LivenessInvariant3Aux_ ==
-    /\  TypeOK
-    /\  LivenessInvariant3Aux
+    /\  NoFutureVote
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
+    /\  \E Q \in Quorum : Byz = P \ Q
+    /\  VotesSafe
 
-LivenessInvariant3 ==
-    /\  goodRound > -1 /\ (\A v \in V : \neg Propose_ENABLED(v)) /\ (\A p \in P \ Byz : round[p] = goodRound) => proposed
-LivenessInvariant3_ ==
-    /\  TypeOK
-    /\  OneValuePerPhasePerRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  LivenessInvariant3
-    /\  LivenessInvariant3Aux
+THEOREM Spec => []SafetyInvariant
+THEOREM SafetyInvariant => Safety
+
+\* Liveness proof
 
 (*********************************************************************************)
 (* Next we show that that votes-1 are eventually cast in the good round.         *)
@@ -337,77 +291,15 @@ ProposalProperty == goodRound > -1 /\ proposed =>
                 /\ \A p \in Q \ Byz : \A vt \in votes[p] : vt.phase = 3 /\ vt.round < goodRound =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
-                /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
-ProposalPropertyInvariant ==
-    /\  TypeOK
-    /\  goodRound > -1 => \A p \in P \ Byz :
-        /\  round[p] <= goodRound
-        /\  \A vt \in votes[p] : vt.round <= goodRound
-    /\  \E Q \in Quorum : Byz = P \ Q
-    /\  OneValuePerPhasePerRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  ProposalProperty
+                /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2) \* this in turn implies there is a blocking set claiming it's safe with phase-1 votes
 
-LivenessInvariant4Aux ==
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
-    /\  goodRound > -1 =>
-        /\ \A p \in P \ Byz :
-            /\  round[p] <= goodRound
-            /\  \A vt \in votes[p] : vt.round <= goodRound
-LivenessInvariant4Aux_ ==
-    /\  TypeOK
-    /\  LivenessInvariant4Aux
-    /\  ProposalProperty
-    /\  OneValuePerPhasePerRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  NoFutureVote
+ClaimsSafeAtMonotonic ==
+    \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
+        vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
+            \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
 
-LivenessInvariant4 == goodRound > -1 =>
-    /\ \A p \in P \ Byz :
-        /\  proposed
-        /\  \A p2 \in P \ Byz : round[p2] = goodRound
-        /\  \neg Vote1_ENABLED(p, proposal, goodRound)
-        =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 1 /\ vt.value = proposal
-LivenessInvariant4_ ==
-    /\  TypeOK
-    /\  ProposalProperty
-    /\  OneValuePerPhasePerRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  NoFutureVote
-    /\  LivenessInvariant4Aux
-    /\  LivenessInvariant4
-
-(****************************************************************************)
-(* Next we show that that votes-2,3,4 are eventually cast in the good round *)
-(****************************************************************************)
-LivenessInvariant5 ==
-    /\ \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
-    /\ goodRound > -1 =>
-        /\ \A p \in P \ Byz :
-            /\ \A p2 \in P \ Byz :
-                /\ round[p2] = goodRound
-                /\ \E vt \in votes[p2] : vt.round = goodRound /\ vt.phase = 1 /\ vt.value = proposal
-            /\ \neg Vote2_ENABLED(p, proposal, goodRound)
-            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 2 /\ vt.value = proposal
-        /\ \A p \in P \ Byz :
-            /\ \A p2 \in P \ Byz :
-                /\ round[p2] = goodRound
-                /\ \E vt \in votes[p2] : vt.round = goodRound /\ vt.phase = 2 /\ vt.value = proposal
-            /\ \neg Vote3_ENABLED(p, proposal, goodRound)
-            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 3 /\ vt.value = proposal
-        /\ \A p \in P \ Byz :
-            /\ \A p2 \in P \ Byz :
-                /\ round[p2] = goodRound
-                /\ \E vt \in votes[p2] : vt.round = goodRound /\ vt.phase = 3 /\ vt.value = proposal
-            /\ \neg Vote4_ENABLED(p, proposal, goodRound)
-            =>  \E vt \in votes[p] : vt.round = goodRound /\ vt.phase = 4 /\ vt.value = proposal
-LivenessInvariant5_ ==
-    /\  TypeOK
-    /\  LivenessInvariant5
-
-LivenessInvariant ==
-    /\  TypeOK
-    \* First some basic properties:
+\* Basic invariants:
+LivenessAuxiliaryInvariants == 
     /\  \E Q \in Quorum : Byz = P \ Q
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
@@ -416,20 +308,14 @@ LivenessInvariant ==
         \A p \in P \ Byz :
             /\  round[p] <= goodRound
             /\  \A vt \in votes[p] : vt.round <= goodRound
-    \* ClaimsSafeAt is monotonic:
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
-            vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
-                \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
-    \* The most interesting part:
-    /\  ProposalProperty
-    
-LivenessInvariant_ == TypeOK /\ LivenessInvariant
 
-(**********************************)
-(* Finally, we complete the proof *)
-(**********************************)
-Liveness_ante ==
+LivenessInvariant ==
     /\  TypeOK
-    /\  LivenessInvariant
+    /\  LivenessAuxiliaryInvariants
+    /\  ClaimsSafeAtMonotonic
+    /\  ProposalProperty
+
+THEOREM Spec => []LivenessInvariant
+THEOREM LivenessInvariant => Liveness
 
 =============================================================================

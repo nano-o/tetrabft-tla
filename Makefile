@@ -27,8 +27,8 @@ liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla
 	APA=$(APA) ./check.sh -implication Liveness_ante Liveness TetraBFT
 
 paxos: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR}
-	APA=$(APA) ./check.sh -inductive Invariant Paxos
-	APA=$(APA) ./check.sh -implication Invariant Consistency Paxos
+	APA=$(APA) ./check.sh -inductive ConsistencyInvariant Paxos
+	APA=$(APA) ./check.sh -implication ConsistencyInvariant Consistency Paxos
 	java -XX:+UseParallelGC -jar tla2tools.jar -config TLCPaxos.cfg -workers 4 TLCPaxos.tla
 	APA=$(APA) ./check.sh -inductive LivenessInvariant Paxos
 	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
