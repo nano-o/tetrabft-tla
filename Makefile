@@ -1,5 +1,6 @@
-APA_RELEASE_URL=https://github.com/informalsystems/apalache/releases/download/v0.44.11/apalache-0.44.11.tgz
-APA=apalache-0.44.11
+APA_VERSION=0.45.2
+APA_RELEASE_URL=https://github.com/apalache-mc/apalache/releases/download/v${APA_VERSION}/apalache-${APA_VERSION}.tgz
+APA=apalache-${APA_VERSION}
 APA_ARCHIVE=$(APA).tgz
 TLC_JAR=tla2tools.jar
 TLC_JAR_URL=https://github.com/tlaplus/tlaplus/releases/download/v1.7.3/tla2tools.jar
@@ -23,7 +24,10 @@ tetrabft-safety: $(APA) TetraBFT.tla ApaTetraBFT.tla
 
 tetrabft-liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla ${TLC_JAR} TLCTetraBFT.cfg TLCTetraBFT.tla
 	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
-	APA=$(APA) ./check.sh -inductive LivenessInvariant TetraBFT
+	APA=$(APA) ./check.sh -inductive LivenessAuxiliaryInvariants TetraBFT
+	APA=$(APA) ./check.sh -inductive Vote3AlwaysJustifiableInvariant TetraBFT
+	APA=$(APA) ./check.sh -inductive ProposalAlwaysAcceptableInvariant TetraBFT
+	APA=$(APA) ./check.sh -implication ProposalAlwaysAcceptable2_ante ProposalAlwaysAcceptable2 TetraBFT
 	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness TetraBFT
 
 paxos-safety: $(APA) Paxos.tla ApaPaxos.tla

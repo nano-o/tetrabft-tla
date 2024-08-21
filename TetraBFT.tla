@@ -1,12 +1,14 @@
 --------------------- MODULE TetraBFT ---------------------
 
+\* TODO: tried to improve perf and simplify things, but it seems that the original step-by-step approach was better.
+
 (*********************************************************************************)
 (* This is a high-level specification of the TetraBFT consensus algorithm. There *)
 (* is no network or messages at this level of abstraction, but we do model       *)
 (* Byzantine failures.                                                           *)
 (*********************************************************************************)
 
-\* TODO: check that actions are self-disabling
+\* TODO: check that actions are self-disabling and never re-enabled.
 
 EXTENDS Integers
 
@@ -54,7 +56,7 @@ TypeOK ==
     /\ round \in [P -> Round \cup {-1}]
     /\ proposed \in BOOLEAN
     /\ proposal \in V
-    /\ Byz \in FailProneSets
+    /\ Byz \in SUBSET P
     /\ goodRound \in Round \cup {-1}
 TypeOK_ == TypeOK
 
@@ -261,10 +263,10 @@ VotesSafe == \A p \in P \ Byz : \A vt \in votes[p] :
 
 ConsistencyInvariant ==
     /\  TypeOK
+    /\  Byz \in FailProneSets
     /\  NoFutureVote
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
-    /\  \E Q \in Quorum : Byz = P \ Q
     /\  VotesSafe
 
 THEOREM Spec => []ConsistencyInvariant
@@ -277,6 +279,20 @@ THEOREM ConsistencyInvariant => Consistency
 (* a finite number of actions, this show, under fair scheduling, we eventually get *)
 (* a decision.                                                                     *)
 (***********************************************************************************)
+
+\* Basic invariants (also inductive):
+LivenessAuxiliaryInvariants ==
+    /\  TypeOK
+    /\  Byz \in FailProneSets
+    /\  OneValuePerPhasePerRound
+    /\  VoteHasQuorumInPreviousPhase
+    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
+    /\  goodRound > -1 =>
+        \A p \in P \ Byz :
+            /\  round[p] <= goodRound
+            /\  \A vt \in votes[p] : vt.round <= goodRound
+
+THEOREM Spec => []LivenessAuxiliaryInvariants
 
 (***********************************************************************************)
 (* Liveness hinges on two key facts.                                               *)
@@ -319,6 +335,7 @@ ProposalAlwaysAcceptable == goodRound > -1 /\ proposed =>
 \* This is inductive and shows that ProposalAlwaysAcceptable is invariant:
 ProposalAlwaysAcceptableInvariant ==
     /\  TypeOK
+    /\  Byz \in FailProneSets
     /\  goodRound > -1 =>
         \A p \in P \ Byz :
             /\  round[p] <= goodRound
@@ -327,30 +344,49 @@ ProposalAlwaysAcceptableInvariant ==
 
 THEOREM Spec => []ProposalAlwaysAcceptableInvariant
 
-\* Basic invariants (also inductive):
-LivenessAuxiliaryInvariants ==
+ProposalAlwaysAcceptable2 == goodRound > -1 /\ proposed =>
+    \/  goodRound = 0
+    \/  \E Q \in Quorum :
+        /\ \A p \in Q \ Byz : round[p] = goodRound
+        /\  \* either no process voted in phase 4 before round goodRound
+            \/ \A p \in P \ Byz : \A vt \in votes[p] : \neg (vt.phase = 4 /\ vt.round < goodRound)
+            \* or ...
+            \/ \E r \in Round :
+                /\ 0 <= r /\ r < goodRound
+                /\ \A p \in P \ Byz : \A vt \in votes[p] : vt.phase = 4 /\ vt.round < goodRound =>
+                    /\  vt.round <= r
+                    /\  vt.round = r => vt.value = proposal
+                /\ \E S \in Blocking :
+                    /\  S \cap Byz = {}
+                    /\  \A p \in S : ClaimsSafeAt(proposal, goodRound, r, p, 1)
+
+ProposalAlwaysAcceptable2_ante ==
     /\  TypeOK
-    /\  \E Q \in Quorum : Byz = P \ Q
-    /\  OneValuePerPhasePerRound
+    /\  Byz \in FailProneSets
     /\  VoteHasQuorumInPreviousPhase
+    /\  ProposalAlwaysAcceptable
+
+THEOREM Spec => [](ProposalAlwaysAcceptable2_ante => ProposalAlwaysAcceptable2)
+THEOREM Spec => []ProposalAlwaysAcceptable2
+
+\* We now have the following inductive invariant:
+LivenessInvariant ==
+    /\  TypeOK
+    /\  Byz \in FailProneSets
+    /\  OneValuePerPhasePerRound
     /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
     /\  goodRound > -1 =>
         \A p \in P \ Byz :
             /\  round[p] <= goodRound
             /\  \A vt \in votes[p] : vt.round <= goodRound
-
-THEOREM Spec => []LivenessAuxiliaryInvariants
-
-\* We now have the following inductive invariant:
-LivenessInvariant ==
-    /\  LivenessAuxiliaryInvariants
+    /\  VoteHasQuorumInPreviousPhase
     /\  Vote3AlwaysJustifiable
-    /\  ProposalAlwaysAcceptable
+    /\  ProposalAlwaysAcceptable2
 
 THEOREM Spec => []LivenessInvariant
 
 \* And finally:
-THEOREM LivenessInvariant => Liveness
+THEOREM LivenessInvariant => Liveness \* TODO: fails?
 \* Which implies:
 THEOREM Spec => []Liveness
 

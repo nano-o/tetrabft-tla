@@ -11,6 +11,5 @@ echo $TRACE > $PRE_FILE
 echo $TRACE > $POST_FILE
 awk -v RS="" 'NR==4' ${TRACE} | sed '1,2d' >> $PRE_FILE
 awk -v RS="" 'NR==5' ${TRACE} | sed '1,2d' >> $POST_FILE
-diff --side-by-side --width=$COLUMNS $PRE_FILE $POST_FILE | less -REX
-
-
+# diff --colors=always --side-by-side --width=$COLUMNS $PRE_FILE $POST_FILE | less -REX
+nvim -d $PRE_FILE $POST_FILE 

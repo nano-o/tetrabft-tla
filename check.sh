@@ -20,6 +20,6 @@ case "$1" in
     -implication)
         shift
         FILE="Apa${3}.tla"
-        $APA/bin/apalache-mc check --tuning-options=search.invariant.mode=after --init="$1" --inv=$2 --length=0 $FILE
+        $APA/bin/apalache-mc check --tuning-options=search.invariant.mode=after --init=$1 --inv=$2 --length=0 $FILE
         ;;
 esac
