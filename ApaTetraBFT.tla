@@ -6,7 +6,7 @@ EXTENDS Integers
 
 V == {"V1_OF_V", "V2_OF_V"}
 P == {"P1_OF_P", "P2_OF_P", "P3_OF_P"}
-\* With 3 processes, let's say only p1 and p3 may be Byzantine:
+\* With 3 processes, let's say only p1 or p3 may be Byzantine:
 FailProneSets == {{"P1_OF_P"}, {"P3_OF_P"}}
 Quorum == {{"P1_OF_P", "P2_OF_P"}, {"P2_OF_P", "P3_OF_P"}}
 Blocking == {{"P2_OF_P"}}

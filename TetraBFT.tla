@@ -278,23 +278,31 @@ THEOREM ConsistencyInvariant => Consistency
 (* a decision.                                                                     *)
 (***********************************************************************************)
 
-(**********************************************************************************)
-(* Liveness hinges on two key facts.                                              *)
-(*                                                                                *)
-(* First, that once a node claims that something is safe, it never ceases to do   *)
-(* so. This means that a vote-i from a well-behaved node can always be shown safe *)
-(* using vote-(i-1) messages.                                                     *)
-(*                                                                                *)
-(* Second, that a proposal satisfies all the properties needed in order to be     *)
-(* accepted by all well-behaved nodes.                                            *)
-(**********************************************************************************)
+(***********************************************************************************)
+(* Liveness hinges on two key facts.                                               *)
+(*                                                                                 *)
+(* First, that once a node claims that something is safe, it never ceases to do    *)
+(* so. In particular, this means that a vote-3 from a well-behaved node can always *)
+(* be shown safe using vote-2 messages, and we need this fact to show that, in a   *)
+(* good round, a proposal can always be made.                                      *)
+(*                                                                                 *)
+(* Second, that a proposal satisfies all the properties needed in order to be      *)
+(* accepted by all well-behaved nodes.                                             *)
+(***********************************************************************************)
 
-ClaimsSafeAtMonotonic ==
+Vote3AlwaysJustifiable ==
     \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
         vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
             \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
 
-ProposalProperty == goodRound > -1 /\ proposed =>
+\* This is inductive and shows that Vote3AlwaysJustifiable is invariant:
+Vote3AlwaysJustifiableInvariant ==
+    /\  TypeOK
+    /\  Vote3AlwaysJustifiable
+
+THEOREM Spec => []Vote3AlwaysJustifiableInvariant
+
+ProposalAlwaysAcceptable == goodRound > -1 /\ proposed =>
     \/  goodRound = 0
     \/  \E Q \in Quorum :
         /\ \A p \in Q \ Byz : round[p] = goodRound
@@ -308,8 +316,20 @@ ProposalProperty == goodRound > -1 /\ proposed =>
                     /\  vt.round = r => vt.value = proposal
                 /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2) \* this in turn implies there is a blocking set claiming it's safe with phase-1 votes
 
-\* Basic invariants:
-LivenessAuxiliaryInvariants == 
+\* This is inductive and shows that ProposalAlwaysAcceptable is invariant:
+ProposalAlwaysAcceptableInvariant ==
+    /\  TypeOK
+    /\  goodRound > -1 =>
+        \A p \in P \ Byz :
+            /\  round[p] <= goodRound
+            /\  \A vt \in votes[p] : vt.round <= goodRound
+    /\  ProposalAlwaysAcceptable
+
+THEOREM Spec => []ProposalAlwaysAcceptableInvariant
+
+\* Basic invariants (also inductive):
+LivenessAuxiliaryInvariants ==
+    /\  TypeOK
     /\  \E Q \in Quorum : Byz = P \ Q
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
@@ -319,13 +339,19 @@ LivenessAuxiliaryInvariants ==
             /\  round[p] <= goodRound
             /\  \A vt \in votes[p] : vt.round <= goodRound
 
+THEOREM Spec => []LivenessAuxiliaryInvariants
+
+\* We now have the following inductive invariant:
 LivenessInvariant ==
-    /\  TypeOK
     /\  LivenessAuxiliaryInvariants
-    /\  ClaimsSafeAtMonotonic
-    /\  ProposalProperty
+    /\  Vote3AlwaysJustifiable
+    /\  ProposalAlwaysAcceptable
 
 THEOREM Spec => []LivenessInvariant
+
+\* And finally:
 THEOREM LivenessInvariant => Liveness
+\* Which implies:
+THEOREM Spec => []Liveness
 
 =============================================================================
