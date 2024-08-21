@@ -1,6 +1,6 @@
 --------------------------- MODULE TLCPaxos -------------------------------
 
-EXTENDS Paxos, TLC
+EXTENDS Paxos, FiniteSets, TLC
 
 Symm == Permutations(Acceptor) \cup Permutations(Value)
 
@@ -11,5 +11,11 @@ Canary1 == \neg (
         /\ \neg VoteFor_ENABLED(a, b, v)
         /\ \neg Propose_ENABLED(b, v)
 )
+
+leaderFun(b) ==
+    LET PID == 
+            CHOOSE f \in [Acceptor -> 0..Cardinality(Acceptor)] :
+                \A a1,a2 \in Acceptor : f[a1] = f[a2] => a1 = a2
+    IN  CHOOSE a \in Acceptor : PID[a] = b % Cardinality(Acceptor)
 
 ===================================================================================

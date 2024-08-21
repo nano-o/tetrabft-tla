@@ -1,12 +1,14 @@
 ------------------------------- MODULE Paxos -------------------------------
 
-\* TODO check that actions are self-disabling
+\* TODO check that actions are self-disabling and never re-enabled.
 
 EXTENDS Integers
 
 CONSTANTS
     Value,
     Acceptor,
+    Leader(_), \* assigns a leader to each round. why do we need this? Because it's too abstract otherwise.
+    \* TODO: use Leader(_) in the spec
     Quorum,
     Ballot
 
@@ -33,10 +35,11 @@ ChosenAt(b, v) ==
 
 chosen == {v \in Value : \E b \in Ballot : ChosenAt(b, v)}
 
-DidNotVoteAt(a, b) == \A v \in Value : ~ VotedFor(a, b, v)
+DidNotVoteAt(a, b) == \A v \in Value : \neg VotedFor(a, b, v)
 
 CannotVoteAt(a, b) == /\ currBal[a] > b
                       /\ DidNotVoteAt(a, b)
+
 NoneOtherChoosableAt(b, v) ==
    \E Q \in Quorum :
      \A a \in Q : VotedFor(a, b, v) \/ CannotVoteAt(a, b)
