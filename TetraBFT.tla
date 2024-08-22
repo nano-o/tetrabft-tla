@@ -84,9 +84,9 @@ ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
                 /\ 0 <= r2 /\ r2 < r
                 \* no member of Q voted in phaseA after r2 and before r, and
                 \* all members of Q that voted in r2 voted for v:
-                /\ \A q \in Q : \A vt \in votes[q] : vt.round < r =>
-                    /\  vt.phase = phaseA => vt.round <= r2
-                    /\  (vt.phase = phaseA /\ vt.round = r2) => vt.value = v
+                /\ \A q \in Q : \A vt \in votes[q] : vt.round < r /\ vt.phase = phaseA =>
+                    /\  vt.round <= r2
+                    /\  vt.round = r2 => vt.value = v
                 /\ \* v must be safe at r2
                     \E S \in Blocking : \A q \in S : ClaimsSafeAt(v, r, r2, q, phaseB)
 
@@ -272,15 +272,15 @@ ConsistencyInvariant ==
 THEOREM Spec => []ConsistencyInvariant
 THEOREM ConsistencyInvariant => Consistency
 
-(***********************************************************************************)
-(* We now give a proof of liveness. For this we show that, if there is a good      *)
-(* ballot and we exhaust the all enabed actions, then a decision is made. In a     *)
-(* separate file we check that all the actions are self-disabling. Since there are *)
-(* a finite number of actions, this show, under fair scheduling, we eventually get *)
-(* a decision.                                                                     *)
-(***********************************************************************************)
+(*********************************************************************************)
+(* We now give a proof of liveness. For this we show that, if there is a good    *)
+(* ballot and we exhaust the all enabed actions, then a decision is made. In a   *)
+(* separate file we check that all the actions are irrevocably self-disabling.   *)
+(* Since there are a finite number of actions, this show, under fair scheduling, *)
+(* we eventually get a decision.                                                 *)
+(*********************************************************************************)
 
-\* Basic invariants (also inductive):
+\* Basic invariants (is inductive):
 LivenessAuxiliaryInvariants ==
     /\  TypeOK
     /\  Byz \in FailProneSets
@@ -295,35 +295,16 @@ LivenessAuxiliaryInvariants ==
 THEOREM Spec => []LivenessAuxiliaryInvariants
 
 (***********************************************************************************)
-(* Liveness hinges on two key facts.                                               *)
-(*                                                                                 *)
-(* First, that once a node claims that something is safe, it never ceases to do    *)
-(* so. In particular, this means that a vote-3 from a well-behaved node can always *)
-(* be shown safe using vote-2 messages, and we need this fact to show that, in a   *)
-(* good round, a proposal can always be made.                                      *)
-(*                                                                                 *)
-(* Second, that a proposal satisfies all the properties needed in order to be      *)
+(* Next we show that a proposal satisfies all the properties needed in order to be *)
 (* accepted by all well-behaved nodes.                                             *)
 (***********************************************************************************)
-
-Vote3AlwaysJustifiable ==
-    \A p \in P \ Byz : \A vt \in votes[p] : \A r \in Round :
-        vt.round < r /\ vt.round = goodRound /\ vt.phase = 3 => \E Q \in Quorum :
-            \A q \in Q \ Byz : ClaimsSafeAt(vt.value, r, goodRound, q, 2)
-
-\* This is inductive and shows that Vote3AlwaysJustifiable is invariant:
-Vote3AlwaysJustifiableInvariant ==
-    /\  TypeOK
-    /\  Vote3AlwaysJustifiable
-
-THEOREM Spec => []Vote3AlwaysJustifiableInvariant
 
 ProposalAlwaysAcceptable == goodRound > -1 /\ proposed =>
     \/  goodRound = 0
     \/  \E Q \in Quorum :
         /\ \A p \in Q \ Byz : round[p] = goodRound
         /\  \* either no member voted in phase 3 before round goodRound
-            \/ \A p \in Q \ Byz : \A vt \in votes[p] : \neg (vt.phase = 3 /\ vt.round < goodRound)
+            \/ \A p \in Q \ Byz : \A vt \in votes[p] : vt.round < goodRound => vt.phase # 3
             \* or its the latest vote-3 of a quorum and it's claimed vote-2-safe by a well-behaved node
             \/ \E r \in Round :
                 /\ 0 <= r /\ r < goodRound
@@ -340,54 +321,56 @@ ProposalAlwaysAcceptableInvariant ==
         \A p \in P \ Byz :
             /\  round[p] <= goodRound
             /\  \A vt \in votes[p] : vt.round <= goodRound
+    /\  VoteHasQuorumInPreviousPhase
     /\  ProposalAlwaysAcceptable
-
 THEOREM Spec => []ProposalAlwaysAcceptableInvariant
+THEOREM Spec => []ProposalAlwaysAcceptable
 
-ProposalAlwaysAcceptable2 == goodRound > -1 /\ proposed =>
-    \/  goodRound = 0
-    \/  \E Q \in Quorum :
-        /\ \A p \in Q \ Byz : round[p] = goodRound
-        /\  \* either no process voted in phase 4 before round goodRound
-            \/ \A p \in P \ Byz : \A vt \in votes[p] : \neg (vt.phase = 4 /\ vt.round < goodRound)
-            \* or ...
-            \/ \E r \in Round :
-                /\ 0 <= r /\ r < goodRound
-                /\ \A p \in P \ Byz : \A vt \in votes[p] : vt.phase = 4 /\ vt.round < goodRound =>
-                    /\  vt.round <= r
-                    /\  vt.round = r => vt.value = proposal
-                /\ \E S \in Blocking :
-                    /\  S \cap Byz = {}
-                    /\  \A p \in S : ClaimsSafeAt(proposal, goodRound, r, p, 1)
-
-ProposalAlwaysAcceptable2_ante ==
+LivenessInvariants ==
     /\  TypeOK
-    /\  Byz \in FailProneSets
-    /\  VoteHasQuorumInPreviousPhase
+    /\  LivenessAuxiliaryInvariants
     /\  ProposalAlwaysAcceptable
 
-THEOREM Spec => [](ProposalAlwaysAcceptable2_ante => ProposalAlwaysAcceptable2)
-THEOREM Spec => []ProposalAlwaysAcceptable2
-
-\* We now have the following inductive invariant:
-LivenessInvariant ==
-    /\  TypeOK
-    /\  Byz \in FailProneSets
-    /\  OneValuePerPhasePerRound
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
-    /\  goodRound > -1 =>
-        \A p \in P \ Byz :
-            /\  round[p] <= goodRound
-            /\  \A vt \in votes[p] : vt.round <= goodRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  Vote3AlwaysJustifiable
-    /\  ProposalAlwaysAcceptable2
-
-THEOREM Spec => []LivenessInvariant
-
-\* And finally:
-THEOREM LivenessInvariant => Liveness \* TODO: fails?
-\* Which implies:
+THEOREM Spec => []LivenessInvariants
+THEOREM LivenessInvariants => Liveness
 THEOREM Spec => []Liveness
+
+\* Step-by-step liveness proof, to try to improve verification time:
+
+LivenessStep0 ==
+    /\  goodRound > -1
+    /\  \A p \in P \ Byz, v \in V :
+        /\ \neg StartRound_ENABLED(p, goodRound)
+        /\ \neg Propose_ENABLED(v)
+    =>  proposed /\ \A p \in P \ Byz : round[p] = goodRound
+LivenessStep0_ ==
+    /\  LivenessAuxiliaryInvariants
+    /\  LivenessStep0
+
+LivenessStep1 ==
+    /\  goodRound > -1
+    /\  proposed
+    /\  \A p \in P \ Byz :
+            /\ round[p] = goodRound
+            /\ \neg Vote1_ENABLED(p, proposal, goodRound)
+    =>  \A p \in P \ Byz :
+            [round |-> goodRound, phase |-> 1, value |-> proposal] \in votes[p]
+LivenessStep1_ ==
+    /\  LivenessAuxiliaryInvariants
+    /\  ProposalAlwaysAcceptable
+    /\  LivenessStep1
+
+LivenessStep2 ==
+    /\  goodRound > -1
+    /\  \A p \in P \ Byz :
+            /\ round[p] = goodRound
+            /\ [round |-> goodRound, phase |-> 1, value |-> proposal] \in votes[p]
+        /\ \neg Vote2_ENABLED(p, proposal, goodRound)
+        /\ \neg Vote3_ENABLED(p, proposal, goodRound)
+        /\ \neg Vote4_ENABLED(p, proposal, goodRound)
+    =>  decided # {}
+LivenessStep2_ ==
+    /\  LivenessAuxiliaryInvariants
+    /\  LivenessStep2
 
 =============================================================================
