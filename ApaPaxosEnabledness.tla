@@ -1,4 +1,4 @@
---------------------------- MODULE ApaAbstractPaxosEnabledness -------------------------------
+--------------------------- MODULE ApaPaxosEnabledness -------------------------------
 
 EXTENDS Integers
 
@@ -17,20 +17,29 @@ Quorum == {
 MaxBal == 2
 Ballot == 0..MaxBal \* NOTE: we have to make this a finite set for `^Apalache^'
 
+Leader(b) ==
+    CASE b = 0 -> "A1_OF_ACCEPTOR"
+    []   b = 1 -> "A2_OF_ACCEPTOR"
+    []   b = 2 -> "A3_OF_ACCEPTOR"
+    
 VARIABLES
     \* @type: ACCEPTOR -> Set(<<Int,VALUE>>);
     votes,
     \* @type: ACCEPTOR -> Int;
-    maxBal,
+    currBal,
+    \* @type: Set(<<Int,VALUE>>);
+    proposals,
     \* @type: Set(ACCEPTOR);
     crashed,
     \* @type: Int;
     goodBallot,
     \* @type: <<ACCEPTOR, Int, VALUE>> -> Bool;
-    voteFor,
+    voteForTaken,
+    \* @type: <<Int, VALUE>> -> Bool;
+    proposeTaken,
     \* @type: <<ACCEPTOR, Int>> -> Bool;
-    increaseMaxBal
+    increaseCurrBalTaken
 
-INSTANCE AbstractPaxosEnabledness
+INSTANCE PaxosEnabledness
 
 ===================================================================================

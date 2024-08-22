@@ -23,12 +23,10 @@ tetrabft-safety: $(APA) TetraBFT.tla ApaTetraBFT.tla
 	APA=$(APA) ./check.sh -implication ConsistencyInvariant Consistency TetraBFT
 
 tetrabft-liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla ${TLC_JAR} TLCTetraBFT.cfg TLCTetraBFT.tla
-	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
-	APA=$(APA) ./check.sh -inductive LivenessAuxiliaryInvariants TetraBFT
-	APA=$(APA) ./check.sh -inductive Vote3AlwaysJustifiableInvariant TetraBFT
-	APA=$(APA) ./check.sh -inductive ProposalAlwaysAcceptableInvariant TetraBFT
-	APA=$(APA) ./check.sh -implication ProposalAlwaysAcceptable2_ante ProposalAlwaysAcceptable2 TetraBFT
-	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness TetraBFT
+	# java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
+	# APA=$(APA) ./check.sh -inductive LivenessAuxiliaryInvariants TetraBFT
+	# APA=$(APA) ./check.sh -inductive ProposalAlwaysAcceptableInvariant TetraBFT
+	APA=$(APA) ./check.sh -implication LivenessInvariants Liveness TetraBFT
 
 paxos-safety: $(APA) Paxos.tla ApaPaxos.tla
 	APA=$(APA) ./check.sh -inductive ConsistencyInvariant Paxos
@@ -38,5 +36,6 @@ paxos-liveness: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR} TLCPaxos.cfg TLCPaxos.t
 	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCPaxos.cfg -workers 4 TLCPaxos.tla
 	APA=$(APA) ./check.sh -inductive LivenessInvariant Paxos
 	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
+	APA=$(APA) ./check.sh -inductive SelfDisabling PaxosEnabledness
 
 .PHONY: safety

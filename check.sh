@@ -22,4 +22,9 @@ case "$1" in
         FILE="Apa${3}.tla"
         JVM_ARGS="-Xmx25G" $APA/bin/apalache-mc check --tuning-options=search.invariant.mode=after --init=$1 --inv=$2 --length=0 $FILE
         ;;
+    -step)
+        shift
+        FILE="Apa${3}.tla"
+        JVM_ARGS="-Xmx25G" $APA/bin/apalache-mc check --tuning-options=search.invariant.mode=after:"search.invariantFilter=1->.*:smt.randomSeed=${RANDOM}" --init=$1 --inv=$2 --length=1 $FILE
+        ;;
 esac
