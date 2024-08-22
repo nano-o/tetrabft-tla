@@ -7,8 +7,6 @@ TRACE=$(find ./_apalache-out -type f -name "violation1.tla" -printf "%T@ %p\n" |
 PRE_FILE=$(mktemp)
 POST_FILE=$(mktemp)
 
-echo $TRACE > $PRE_FILE
-echo $TRACE > $POST_FILE
 awk -v RS="" 'NR==4' ${TRACE} | sed '1,2d' >> $PRE_FILE
 awk -v RS="" 'NR==5' ${TRACE} | sed '1,2d' >> $POST_FILE
 # diff --colors=always --side-by-side --width=$COLUMNS $PRE_FILE $POST_FILE | less -REX

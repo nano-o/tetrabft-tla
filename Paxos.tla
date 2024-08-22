@@ -8,7 +8,6 @@ CONSTANTS
     Value,
     Acceptor,
     Leader(_), \* assigns a leader to each round. why do we need this? Because it's too abstract otherwise.
-    \* TODO: use Leader(_) in the spec
     Quorum,
     Ballot
 
@@ -62,13 +61,15 @@ Init ==
     /\ goodBallot \in Ballot
 
 Crash(a) ==
+    /\  goodBallot > -1 => a # Leader(goodBallot)
     /\  crashed' = crashed \cup {a}
     /\  \E Q \in Quorum : \A a2 \in Q : a2 \notin crashed'
     /\  UNCHANGED <<votes, currBal, proposals, goodBallot>>
 
 Propose(b, v) ==
-    /\ \A prop \in proposals : prop[1] # b
-    /\ \E Q \in Quorum : ShowsSafeAt(Q, b, v)
+    /\  Leader(b) \notin crashed
+    /\  \A prop \in proposals : prop[1] # b
+    /\  \E Q \in Quorum : ShowsSafeAt(Q, b, v)
     /\  proposals' = proposals \cup {<<b,v>>}
     /\  UNCHANGED <<votes, currBal, crashed, goodBallot>>
 
@@ -106,8 +107,7 @@ ProposalsSafe == \A b \in Ballot, v \in Value :
 
 OneValuePerBallot ==
     \A a1, a2 \in Acceptor, b \in Ballot, v1, v2 \in Value :
-        /\  (VotedFor(a1, b, v1) /\ VotedFor(a2, b, v2)) => v1 = v2
-        /\  (<<b,v1>> \in proposals /\ <<b,v2>> \in proposals) => v1 = v2
+        <<b,v1>> \in proposals /\ <<b,v2>> \in proposals => v1 = v2
 
 VoteForProposal == \A a \in Acceptor, b \in Ballot, v \in Value :
     VotedFor(a, b, v) => <<b,v>> \in proposals
@@ -140,8 +140,9 @@ THEOREM ConsistencyInvariant => Consistency
 \* This is because Apalache does not support the ENABLED operator.
 
 Propose_ENABLED(b, v) ==
-    /\ \A prop \in proposals : prop[1] # b
-    /\ \E Q \in Quorum : ShowsSafeAt(Q, b, v)
+    /\  Leader(b) \notin crashed
+    /\  \A prop \in proposals : prop[1] # b
+    /\  \E Q \in Quorum : ShowsSafeAt(Q, b, v)
 
 IncreaseCurrBal_ENABLED(a, b) ==
   /\ a \notin crashed
@@ -183,6 +184,7 @@ LivenessInvariant ==
     /\  OneValuePerBallot
     /\  NothingAfterGoodBallot
     /\  \E Q \in Quorum : Q \cap crashed = {}
+    /\  goodBallot > -1 => \neg Leader(goodBallot) \in crashed
 
 THEOREM Spec => []LivenessInvariant
 THEOREM LivenessInvariant => Liveness
