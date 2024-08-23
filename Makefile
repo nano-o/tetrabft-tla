@@ -3,7 +3,7 @@ APA_RELEASE_URL=https://github.com/apalache-mc/apalache/releases/download/v${APA
 APA=apalache-${APA_VERSION}
 APA_ARCHIVE=$(APA).tgz
 TLC_JAR=tla2tools.jar
-TLC_JAR_URL=https://github.com/tlaplus/tlaplus/releases/download/v1.7.3/tla2tools.jar
+TLC_JAR_URL=https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
 
 all: safety
 
@@ -23,7 +23,7 @@ tetrabft-safety: $(APA) TetraBFT.tla ApaTetraBFT.tla
 	APA=$(APA) ./check.sh -implication ConsistencyInvariant Consistency TetraBFT
 
 tetrabft-liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla ${TLC_JAR} TLCTetraBFT.cfg TLCTetraBFT.tla
-	# java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
+	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
 	APA=$(APA) ./check.sh -inductive LivenessAuxiliaryInvariants TetraBFT
 	APA=$(APA) ./check.sh -inductive ProposalAlwaysAcceptableInvariant TetraBFT
 	APA=$(APA) ./check.sh -relative LivenessStep0_ LivenessStep0 TetraBFT

@@ -1,20 +1,18 @@
 ------------------------------- MODULE Paxos -------------------------------
 
-\* TODO check that actions are self-disabling and never re-enabled.
-
 EXTENDS Integers
 
 CONSTANTS
     Value,
     Acceptor,
-    Leader(_), \* assigns a leader to each round. why do we need this? Because it's too abstract otherwise.
+    Leader(_), \* assigns a leader to each round. Why do we need this? Because it's too abstract otherwise.
     Quorum,
     Ballot
 
 VARIABLES
-    votes, \* 2b
+    votes,
     currBal,
-    proposals, \* 2a
+    proposals,
     crashed,
     goodBallot
 
