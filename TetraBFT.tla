@@ -1,14 +1,10 @@
 --------------------- MODULE TetraBFT ---------------------
 
-\* TODO: tried to improve perf and simplify things, but it seems that the original step-by-step approach was better.
-
 (*********************************************************************************)
 (* This is a high-level specification of the TetraBFT consensus algorithm. There *)
 (* is no network or messages at this level of abstraction, but we do model       *)
 (* Byzantine failures.                                                           *)
 (*********************************************************************************)
-
-\* TODO: check that actions are self-disabling and never re-enabled.
 
 EXTENDS Integers
 
@@ -334,43 +330,5 @@ LivenessInvariants ==
 THEOREM Spec => []LivenessInvariants
 THEOREM LivenessInvariants => Liveness
 THEOREM Spec => []Liveness
-
-\* Step-by-step liveness proof, to try to improve verification time:
-
-LivenessStep0 ==
-    /\  goodRound > -1
-    /\  \A p \in P \ Byz, v \in V :
-        /\ \neg StartRound_ENABLED(p, goodRound)
-        /\ \neg Propose_ENABLED(v)
-    =>  proposed /\ \A p \in P \ Byz : round[p] = goodRound
-LivenessStep0_ ==
-    /\  LivenessAuxiliaryInvariants
-    /\  LivenessStep0
-
-LivenessStep1 ==
-    /\  goodRound > -1
-    /\  proposed
-    /\  \A p \in P \ Byz :
-            /\ round[p] = goodRound
-            /\ \neg Vote1_ENABLED(p, proposal, goodRound)
-    =>  \A p \in P \ Byz :
-            [round |-> goodRound, phase |-> 1, value |-> proposal] \in votes[p]
-LivenessStep1_ ==
-    /\  LivenessAuxiliaryInvariants
-    /\  ProposalAlwaysAcceptable
-    /\  LivenessStep1
-
-LivenessStep2 ==
-    /\  goodRound > -1
-    /\  \A p \in P \ Byz :
-            /\ round[p] = goodRound
-            /\ [round |-> goodRound, phase |-> 1, value |-> proposal] \in votes[p]
-        /\ \neg Vote2_ENABLED(p, proposal, goodRound)
-        /\ \neg Vote3_ENABLED(p, proposal, goodRound)
-        /\ \neg Vote4_ENABLED(p, proposal, goodRound)
-    =>  decided # {}
-LivenessStep2_ ==
-    /\  LivenessAuxiliaryInvariants
-    /\  LivenessStep2
 
 =============================================================================

@@ -116,7 +116,7 @@ Next  ==  \E a \in Acceptor, b \in Ballot, v \in Value :
 
 Spec == Init /\ [][Next]_vars
 
-SelfDisabling == 
+SelfDisabling ==
     /\  TypeOK
     /\  \A a \in Acceptor, b \in Ballot, v \in Value :
         /\  voteForTaken[<<a,b,v>>] =>
@@ -125,7 +125,7 @@ SelfDisabling ==
         /\  increaseCurrBalTaken[<<a,b>>] => 
             /\  \neg IncreaseCurrBal_ENABLED(a, b)
             /\  currBal[a] >= b
-        /\  proposeTaken[<<b,v>>] => 
+        /\  proposeTaken[<<b,v>>] =>
             /\  \neg Propose_ENABLED(b, v)
             /\   <<b,v>> \in proposals
 

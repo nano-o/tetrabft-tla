@@ -103,7 +103,7 @@ Spec == Init /\ [][Next]_vars
 ProposalsSafe == \A b \in Ballot, v \in Value :
     <<b, v>> \in proposals => SafeAt(b, v)
 
-OneValuePerBallot ==
+ProposalsUnique ==
     \A a1, a2 \in Acceptor, b \in Ballot, v1, v2 \in Value :
         <<b,v1>> \in proposals /\ <<b,v2>> \in proposals => v1 = v2
 
@@ -119,7 +119,7 @@ Consistency == \A v,w \in chosen : v = w
 ConsistencyInvariant ==
   /\ TypeOK
   /\ VoteForProposal
-  /\ OneValuePerBallot
+  /\ ProposalsUnique
   /\ NoVoteAfterCurrBal
   /\ ProposalsSafe
 
@@ -171,18 +171,22 @@ Liveness ==
 
 \* Next we propose an inductive invariant that implies the liveness property:
 
-NothingAfterGoodBallot == goodBallot > -1 =>
+GoodBallotIsMaxBallot == goodBallot > -1 =>
     \A a \in Acceptor, b \in Ballot, v \in Value :
-        VotedFor(a, b, v) \/ <<b,v>> \in proposals \/ b = currBal[a] => b <= goodBallot
+        <<b,v>> \in proposals \/ b = currBal[a] => b <= goodBallot
+
+QuorumNotCrashed == \E Q \in Quorum : Q \cap crashed = {}
+
+GoodBallotLeaderNotCrashed == goodBallot > -1 => \neg Leader(goodBallot) \in crashed
 
 \* This invariant is inductive, and it implies liveness:
 LivenessInvariant ==
     /\  TypeOK
     /\  VoteForProposal
-    /\  OneValuePerBallot
-    /\  NothingAfterGoodBallot
-    /\  \E Q \in Quorum : Q \cap crashed = {}
-    /\  goodBallot > -1 => \neg Leader(goodBallot) \in crashed
+    /\  ProposalsUnique
+    /\  GoodBallotIsMaxBallot
+    /\  QuorumNotCrashed
+    /\  GoodBallotLeaderNotCrashed
 
 THEOREM Spec => []LivenessInvariant
 THEOREM LivenessInvariant => Liveness
@@ -190,7 +194,7 @@ THEOREM LivenessInvariant => Liveness
 \* This is what we would do using temporal logic and TLC:
 
 \* First we need to add fairness conditions:
-LiveSpec == 
+LiveSpec ==
     /\  Init
     /\  [][Next]_vars
     /\  \A a \in Acceptor, b \in Ballot, v \in Value :
@@ -200,6 +204,8 @@ LiveSpec ==
 
 \* Now we can check the following property with TLC:
 RealLiveness == goodBallot > -1 => <>(chosen # {})
+
+THEOREM LiveSpec => RealLiveness
 
 
 =====================================================================================
