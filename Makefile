@@ -30,10 +30,10 @@ paxos-safety: $(APA) Paxos.tla ApaPaxos.tla
 	APA=$(APA) ./check.sh -implication ConsistencyInvariant Consistency Paxos
 
 paxos-liveness: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR} TLCPaxos.cfg TLCPaxos.tla
-	# java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCPaxos.cfg -workers 4 TLCPaxos.tla
-	# java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCPaxosLiveness.cfg -workers 4 TLCPaxos.tla
-	# APA=$(APA) ./check.sh -inductive LivenessInvariant Paxos
-	# APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
+	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCPaxos.cfg -workers 4 TLCPaxos.tla
+	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCPaxosLiveness.cfg -workers 4 TLCPaxos.tla
+	APA=$(APA) ./check.sh -inductive LivenessInvariant Paxos
+	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
 	APA=$(APA) ./check.sh -inductive SelfDisabling PaxosSelfDisablingActions
 
 .PHONY: safety
