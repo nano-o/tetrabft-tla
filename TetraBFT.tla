@@ -93,6 +93,8 @@ DoVote(p, v, r, phase) ==
     \* cast the vote:
     /\ votes' = [votes EXCEPT ![p] = @ \union {[round |-> r, phase |-> phase, value |-> v]}]
 
+\* Now the actions
+
 StartRound(p, r) ==
     /\  p \notin Byz
     /\  goodRound > -1 => r <= goodRound \* a good round lasts "long enough", i.e. forever
@@ -100,6 +102,7 @@ StartRound(p, r) ==
     /\  round' = [round EXCEPT ![p] = r]
     /\  UNCHANGED <<votes, proposed, proposal, goodRound, Byz>>
 
+\* propose in the goodRound
 Propose(v) ==
     /\  goodRound > -1
     /\  \neg proposed
@@ -160,7 +163,7 @@ Next ==
         \/ Vote4(p, v, r)
         \/ StartRound(p, r)
         \/ Propose(v)
-        
+
 \* For TLC:
 NextNoByz ==
     \E p \in P, v \in V, r \in Round :

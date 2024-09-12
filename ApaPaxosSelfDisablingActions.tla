@@ -21,7 +21,7 @@ Leader(b) ==
     CASE b = 0 -> "A1_OF_ACCEPTOR"
     []   b = 1 -> "A2_OF_ACCEPTOR"
     []   b = 2 -> "A3_OF_ACCEPTOR"
-    
+
 VARIABLES
     \* @type: ACCEPTOR -> Set(<<Int,VALUE>>);
     votes,

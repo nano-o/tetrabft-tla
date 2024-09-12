@@ -24,6 +24,7 @@ tetrabft-liveness: $(APA) TetraBFT.tla ApaTetraBFT.tla ${TLC_JAR} TLCTetraBFT.cf
 	java -XX:+UseParallelGC -jar ${TLC_JAR} -config TLCTetraBFT.cfg -workers 4 -deadlock TLCTetraBFT.tla
 	APA=$(APA) ./check.sh -inductive LivenessInvariants TetraBFT
 	APA=$(APA) ./check.sh -implication LivenessInvariants Liveness TetraBFT
+	APA=$(APA) ./check.sh -inductive SelfDisabling TetraBFTSelfDisablingActions
 
 paxos-safety: $(APA) Paxos.tla ApaPaxos.tla
 	APA=$(APA) ./check.sh -inductive ConsistencyInvariant Paxos
