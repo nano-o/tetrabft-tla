@@ -18,7 +18,10 @@ We also introduce a `Propose` actions which models the leader of `goodRound`, wh
 This formalizes the assumption that there is eventually a round that lasts long enough and that has a well-behaved leader.
 
 Second, we check that all the actions that are fairly scheduled (voting, changing round, proposing) are self-disabling.
-Because, in our finite domain, there are finitely many such actions, this implies that, under fair scheduling, all actions are eventually disabled.
+This is formalized in file [ApaTetraBFTSelfDisablingActions.tla](./ApaPaxosSelfDisablingActions.tla).
+Note that, because Apalache does not support `ENABLED`, we manually specify the enabledness conditions of the actions; to make sure we did not make a typo, we check the correctness of the enabledness predicates with TLC (see predicate `ENABLED_OK` in [TetraBFT.tla](./TetraBFT.tla)).
+
+Because, in our finite domain, there are finitely many such actions, the fact that the actions are self-disabling implies that, under fair scheduling, all actions are eventually disabled.
 
 Finally, we check that, once all fairly-scheduled actions are disabled, a quorum of well-behaved processes has voted unanimously.
 
