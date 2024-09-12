@@ -1,4 +1,4 @@
---------------------------- MODULE ApaPaxosEnabledness -------------------------------
+--------------------------- MODULE ApaPaxosSelfDisablingActions -------------------------------
 
 EXTENDS Integers
 
@@ -40,6 +40,6 @@ VARIABLES
     \* @type: <<ACCEPTOR, Int>> -> Bool;
     increaseCurrBalTaken
 
-INSTANCE PaxosEnabledness
+INSTANCE PaxosSelfDisablingActions
 
 ===================================================================================

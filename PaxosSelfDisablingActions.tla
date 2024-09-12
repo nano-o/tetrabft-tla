@@ -1,6 +1,7 @@
-------------------------------- MODULE PaxosEnabledness -------------------------------
+------------------------------- MODULE PaxosSelfDisablingActions -------------------------------
 
-\* Here we show that Propose, IncreaseCurrBal, and VoteFor are irrevocably self-disabling.
+\* Here we show that the actions Propose, IncreaseCurrBal, and VoteFor are self-disabling.
+\* For this, we copy Paxos.tla, add ghost variables to track when an action has been taken already, and then check that the actions are self-disabling using an inductive invariant.
 
 EXTENDS Integers
 
@@ -21,7 +22,7 @@ VARIABLES
     voteForTaken,
     increaseCurrBalTaken
 
-vars == <<votes, currBal, crashed, goodBallot, voteForTaken, increaseCurrBalTaken>>
+vars == <<votes, currBal, crashed, goodBallot, proposeTaken, voteForTaken, increaseCurrBalTaken>>
 
 TypeOK ==
     /\ votes \in [Acceptor -> SUBSET (Ballot\times Value)]
@@ -39,7 +40,6 @@ DidNotVoteAt(a, b) == \A v \in Value : ~ VotedFor(a, b, v)
 
 ShowsSafeAt(Q, b, v) ==
   /\ \A a \in Q : currBal[a] \geq b
-  \* NOTE: `^Apalache^' does not support non-constant integer ranges (e.g. we cannot write (c+1)..(b-1))
   /\ \E c \in Ballot\cup {-1} :
     /\ c < b
     /\ (c # -1) => \E a \in Q : VotedFor(a, c, v)
