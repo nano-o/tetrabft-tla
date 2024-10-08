@@ -37,4 +37,4 @@ paxos-liveness: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR} TLCPaxos.cfg TLCPaxos.t
 	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
 	APA=$(APA) ./check.sh -inductive SelfDisabling PaxosSelfDisablingActions
 
-.PHONY: safety
+.PHONY: tetrabft-safety tetrabft-liveness paxos-safety paxos-liveness
