@@ -26,9 +26,9 @@ This is formalized in file [ApaTetraBFTSelfDisablingActions.tla](./ApaPaxosSelfD
 Note that, because Apalache does not support `ENABLED`, we manually specify the enabledness conditions of the actions; to make sure we did not make a typo, we check the correctness of the enabledness predicates with TLC (see predicate `ENABLED_OK` in [TetraBFT.tla](./TetraBFT.tla)).
 Because, in our finite domain, there are finitely many such actions, the fact that the actions are self-disabling implies that, under fair scheduling and in a long-enough round, all actions of well-behaved nodes are eventually disabled (the soundness of this relies on our assumption that Byzantine nodes do not take steps and therefore cannot cause an action of a well-behaved node to become enabled just before the round timer would fire).
 
-Finally, we check that, once all fairly-scheduled actions are disabled, we have a consensus decision.
+Finally, we check that, once all actions of well-behaved nodes are disabled, we have a consensus decision.
 
-Note that the two properties we checks are safety properties, and check them by providing and checking suitable inductive invariants.
+Note that the two properties we checks are safety properties, and we check them by providing and checking suitable inductive invariants.
 
 # Didactic Paxos proof
 
