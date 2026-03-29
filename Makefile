@@ -37,4 +37,14 @@ paxos-liveness: $(APA) Paxos.tla ApaPaxos.tla ${TLC_JAR} TLCPaxos.cfg TLCPaxos.t
 	APA=$(APA) ./check.sh -implication LivenessInvariant Liveness Paxos
 	APA=$(APA) ./check.sh -inductive SelfDisabling PaxosSelfDisablingActions
 
+%_cropped.pdf: %.pdf
+	gs -dBATCH -dNOPAUSE -sDEVICE=bbox $< 2>&1 \
+	| grep '%%BoundingBox' \
+	| awk '{print $$2, $$3, $$4, $$5}' \
+	| awk 'BEGIN{lx=9999;ly=9999;ux=0;uy=0} {if($$1<lx)lx=$$1; if($$2<ly)ly=$$2; if($$3>ux)ux=$$3; if($$4>uy)uy=$$4} END{print lx, ly, ux, uy}' \
+	| xargs -I{} pdfcrop --bbox '{}' $< $@
+
+%.pdf: %.tla $(TLC_JAR)
+	java -cp $(TLC_JAR) tla2tex.TLA -shade -number -ps -latexCommand pdflatex $<
+
 .PHONY: tetrabft-safety tetrabft-liveness paxos-safety paxos-liveness

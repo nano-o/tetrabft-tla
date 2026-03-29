@@ -75,7 +75,8 @@ ClaimsSafeAt(v, r, r2, p, phase) ==
 ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
     \/ r = 0
     \/  /\ \A q \in Q : round[q] >= r \* every member of Q is in round at least r
-        /\  \/ \A q \in Q : \A vt \in votes[q] : vt.round < r => vt.phase # phaseA \* members of Q never voted in phaseA before round r
+        /\  \/ \A q \in Q : \A vt \in votes[q] : vt.round < r => vt.phase # phaseA
+            \* members of Q never voted in phaseA before round r
             \/ \E r2 \in Round :
                 /\ 0 <= r2 /\ r2 < r
                 \* no member of Q voted in phaseA after r2 and before r, and
@@ -310,7 +311,8 @@ ProposalAlwaysAcceptable == goodRound > -1 /\ proposed =>
                 /\ \A p \in Q \ Byz : \A vt \in votes[p] : vt.phase = 3 /\ vt.round < goodRound =>
                     /\  vt.round <= r
                     /\  vt.round = r => vt.value = proposal
-                /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2) \* this in turn implies there is a blocking set claiming it's safe with phase-1 votes
+                /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
+                \* this in turn implies there is a blocking set claiming it's safe with phase-1 votes
 
 \* This is inductive and shows that ProposalAlwaysAcceptable is invariant:
 ProposalAlwaysAcceptableInvariant ==
