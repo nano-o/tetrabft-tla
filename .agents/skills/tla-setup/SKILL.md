@@ -29,13 +29,29 @@ user chose, never inside a project checkout. The scripts find the tooling
 only through it.
 
 ```bash
+export TLA_TOOLING_ROOT="/absolute/path/to/tooling"
 test -x "$TLA_TOOLING_ROOT/bin/tla-tooling" && echo ok
 git -C "$TLA_TOOLING_ROOT" rev-parse HEAD
 ```
 
-If the variable is unset or wrong, stop and tell the user to set it in
-the profile that the shell starting the host reads, and to restart the
-host session.
+Use the clone path chosen by the user. Install steps below persist the
+export in a marked block in `~/.profile`, preserving unrelated settings
+and backing up a changed existing profile as `~/.profile.bak`. Repeating
+an install updates the block without duplicating it; `--dry-run` leaves
+the profile alone. Remove the block to undo it.
+
+If the variable is unset or wrong in an agent session, explain that the
+installer cannot update its parent environment. Have the user export it
+in a terminal before relaunching the agent host from that terminal;
+another conversation may reuse the existing host. An export only in
+`.bashrc` after its interactive-shell guard does not reach noninteractive
+shells. Bash reads `~/.bash_profile` or `~/.bash_login` instead of
+`~/.profile` when present: the first file it reads must source
+`~/.profile` outside interactive-only conditions. Other shells and desktop
+launchers may need their login or session environment setup. Persist any
+needed `JAVA_HOME` or Homebrew `PATH` settings there too; the installer
+only writes `TLA_TOOLING_ROOT`. Finish with doctor and smoke from the
+relaunched agent session to verify its inherited environment.
 
 The clone need not be at the project's `tooling_revision`: the tooling
 at that pin is in the store (the `tooling` step below, which `init` and

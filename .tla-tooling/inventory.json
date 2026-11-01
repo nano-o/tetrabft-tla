@@ -20,11 +20,11 @@
     },
     ".agents/skills/tla-setup/SKILL.md": {
       "executable": false,
-      "sha256": "20a16f87397d2ef0acce412b802d5a7335eb05ba1759c93ccbf4625d6bfacd4f"
+      "sha256": "3a0b7b4ad6d1b142e1e6c68347c674e05ca6f484b934c178889bad2096a4d70c"
     },
     ".agents/skills/tlaps/ATTRIBUTION.md": {
       "executable": false,
-      "sha256": "320efe6bb6bed617cdd82748d0993fea06e389ab1d70491d2351e9fef6cdf109"
+      "sha256": "e706f60075b38a80bba7429124778d5ce0d34f3f0456ea3e482f0c3c81b83230"
     },
     ".agents/skills/tlaps/SKILL.md": {
       "executable": false,
@@ -79,7 +79,7 @@
   "json_entries": [],
   "link_source": null,
   "mode": "copy",
-  "revision": "b34b1f9e2cb50ccf2e82a9d9b1676fb48410517c",
+  "revision": "ad0748850713def83aff67c0204683f9d53a7957",
   "symlinks": {
     ".claude/skills/tla-modeling": "../../.agents/skills/tla-modeling",
     ".claude/skills/tla-setup": "../../.agents/skills/tla-setup",
