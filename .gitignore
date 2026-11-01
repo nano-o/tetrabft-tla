@@ -1,0 +1,6 @@
+# Outputs from the shared TLA+ tooling and existing model checkers.
+.tla-runs/
+.tlacache/
+states/
+_apalache-out/
+*_TTrace_*

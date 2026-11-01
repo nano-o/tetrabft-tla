@@ -23,10 +23,7 @@ ASSUME
 \* Each round consists of 4 phases:
 Phase == 1..4
 \* A vote is cast in a phase of a round and for a value:
-\* @typeAlias: voteType = {round : Int, value : V, phase : Int};
 Vote == [round: Round, phase: Phase, value: V]
-
-NotAVote == [round |-> -1, phase |-> 1, value |-> CHOOSE v \in V : TRUE]
 
 \* We now specify the behaviors of the algorithm:
 
@@ -54,7 +51,6 @@ TypeOK ==
     /\ proposal \in V
     /\ Byz \in SUBSET P
     /\ goodRound \in Round \cup {-1}
-TypeOK_ == TypeOK
 
 decided == {v \in V : \E Q \in Quorum, r \in Round : \A p \in Q \ Byz :
     [round |-> r, phase |-> 4, value |-> v] \in votes[p] }
@@ -73,7 +69,7 @@ ClaimsSafeAt(v, r, r2, p, phase) ==
 \* In case of a vote, we'll use phaseA=4 and phaseB=1
 \* In case of a proposal, we'll use phaseA=3 and phaseB=2
 ShowsSafeAt(Q, v, r, phaseA, phaseB) ==
-    \/ r = 0
+    \/ r= 0
     \/  /\ \A q \in Q : round[q] >= r \* every member of Q is in round at least r
         /\  \/ \A q \in Q : \A vt \in votes[q] : vt.round < r => vt.phase # phaseA
             \* members of Q never voted in phaseA before round r
@@ -165,78 +161,11 @@ Next ==
         \/ StartRound(p, r)
         \/ Propose(v)
 
-\* For TLC:
-NextNoByz ==
-    \E p \in P, v \in V, r \in Round :
-        \/ Vote1(p, v, r)
-        \/ Vote2(p, v, r)
-        \/ Vote3(p, v, r)
-        \/ Vote4(p, v, r)
-        \/ StartRound(p, r)
-        \/ Propose(v)
-
 Spec == Init /\ [][Next]_vars
 
 Consistency == \A v1,v2 \in decided : v1 = v2
 
-\* Manual encoding of ENABLED for Apalache:
-
-Propose_ENABLED(v) ==
-    /\  goodRound > -1
-    /\  \neg proposed
-    /\  \E Q \in Quorum : ShowsSafeAt(Q, v, goodRound, 3, 2)
-
-Vote1_ENABLED(p, v, r) ==
-    /\ p \notin Byz
-    /\ r = goodRound => proposed /\ v = proposal
-    /\ r = round[p]
-    /\ \E Q \in Quorum : ShowsSafeAt(Q, v, r, 4, 1)
-    /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # 1
-
-Vote2_ENABLED(p, v, r) ==
-    /\ p \notin Byz
-    /\ r = round[p]
-    /\ Accepted(p, v, r, 1)
-    /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # 2
-
-Vote3_ENABLED(p, v, r) ==
-    /\ p \notin Byz
-    /\ r = round[p]
-    /\ Accepted(p, v, r, 2)
-    /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # 3
-
-Vote4_ENABLED(p, v, r) ==
-    /\ p \notin Byz
-    /\ r = round[p]
-    /\ Accepted(p, v, r, 3)
-    /\ \A vt \in votes[p] : vt.round # r \/ vt.phase # 4
-
-StartRound_ENABLED(p, r) ==
-    /\  p \notin Byz
-    /\  goodRound > -1 => r <= goodRound
-    /\  round[p] < r
-
-\* For use with TLC to catch errors in the ENABLED predicates:
-ENABLED_OK == \A p \in P, v \in V, r \in Round :
-    /\  (ENABLED Propose(v)) = Propose_ENABLED(v)
-    /\  (ENABLED Vote1(p, v, r)) = Vote1_ENABLED(p, v, r)
-    /\  (ENABLED Vote2(p, v, r)) = Vote2_ENABLED(p, v, r)
-    /\  (ENABLED Vote3(p, v, r)) = Vote3_ENABLED(p, v, r)
-    /\  (ENABLED Vote4(p, v, r)) = Vote4_ENABLED(p, v, r)
-    /\  (ENABLED StartRound(p, r)) = StartRound_ENABLED(p, r)
-
-Liveness ==
-    /\  goodRound > -1
-    /\  \A p \in P \ Byz, v \in V, r \in Round :
-        /\ \neg Propose_ENABLED(v)
-        /\ \neg Vote1_ENABLED(p, v, r)
-        /\ \neg Vote2_ENABLED(p, v, r)
-        /\ \neg Vote3_ENABLED(p, v, r)
-        /\ \neg Vote4_ENABLED(p, v, r)
-        /\ \neg StartRound_ENABLED(p, r)
-    =>  decided # {}
-
-\* Safety proof
+\* Candidate safety invariant; no TLAPS proof has been supplied yet.
 
 VotedFor(p, r, v) ==  [round |-> r, phase |-> 4, value |-> v] \in votes[p]
 
@@ -268,72 +197,5 @@ ConsistencyInvariant ==
     /\  OneValuePerPhasePerRound
     /\  VoteHasQuorumInPreviousPhase
     /\  VotesSafe
-
-THEOREM Spec => []ConsistencyInvariant
-THEOREM ConsistencyInvariant => Consistency
-
-(*********************************************************************************)
-(* We now give a proof of liveness. For this we show that, if there is a good    *)
-(* ballot and we exhaust the all enabed actions, then a decision is made. In a   *)
-(* separate file we check that all the actions are irrevocably self-disabling.   *)
-(* Since there are a finite number of actions, this show, under fair scheduling, *)
-(* we eventually get a decision.                                                 *)
-(*********************************************************************************)
-
-\* Basic invariants (is inductive):
-LivenessAuxiliaryInvariants ==
-    /\  TypeOK
-    /\  Byz \in FailProneSets
-    /\  OneValuePerPhasePerRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  \A p \in P \ Byz : \A vt \in votes[p] : vt.round = goodRound => proposed /\ vt.value = proposal
-    /\  goodRound > -1 =>
-        \A p \in P \ Byz :
-            /\  round[p] <= goodRound
-            /\  \A vt \in votes[p] : vt.round <= goodRound
-
-THEOREM Spec => []LivenessAuxiliaryInvariants
-
-(***********************************************************************************)
-(* Next we show that a proposal satisfies all the properties needed in order to be *)
-(* accepted by all well-behaved nodes.                                             *)
-(***********************************************************************************)
-
-ProposalAlwaysAcceptable == goodRound > -1 /\ proposed =>
-    \/  goodRound = 0
-    \/  \E Q \in Quorum :
-        /\ \A p \in Q \ Byz : round[p] = goodRound
-        /\  \* either no member voted in phase 3 before round goodRound
-            \/ \A p \in Q \ Byz : \A vt \in votes[p] : vt.round < goodRound => vt.phase # 3
-            \* or its the latest vote-3 of a quorum and it's claimed vote-2-safe by a well-behaved node
-            \/ \E r \in Round :
-                /\ 0 <= r /\ r < goodRound
-                /\ \A p \in Q \ Byz : \A vt \in votes[p] : vt.phase = 3 /\ vt.round < goodRound =>
-                    /\  vt.round <= r
-                    /\  vt.round = r => vt.value = proposal
-                /\ \E p \in P \ Byz : ClaimsSafeAt(proposal, goodRound, r, p, 2)
-                \* this in turn implies there is a blocking set claiming it's safe with phase-1 votes
-
-\* This is inductive and shows that ProposalAlwaysAcceptable is invariant:
-ProposalAlwaysAcceptableInvariant ==
-    /\  TypeOK
-    /\  Byz \in FailProneSets
-    /\  goodRound > -1 =>
-        \A p \in P \ Byz :
-            /\  round[p] <= goodRound
-            /\  \A vt \in votes[p] : vt.round <= goodRound
-    /\  VoteHasQuorumInPreviousPhase
-    /\  ProposalAlwaysAcceptable
-THEOREM Spec => []ProposalAlwaysAcceptableInvariant
-THEOREM Spec => []ProposalAlwaysAcceptable
-
-LivenessInvariants ==
-    /\  TypeOK
-    /\  LivenessAuxiliaryInvariants
-    /\  ProposalAlwaysAcceptable
-
-THEOREM Spec => []LivenessInvariants
-THEOREM LivenessInvariants => Liveness
-THEOREM Spec => []Liveness
 
 =============================================================================

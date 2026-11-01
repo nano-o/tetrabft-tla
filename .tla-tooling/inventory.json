@@ -1,0 +1,88 @@
+{
+  "blocks": [
+    {
+      "file": "AGENTS.md",
+      "sha256": "49371682a81452b1b399e35cec2c6f2b7ed08a5422cad069318f87bd0170143d",
+      "syntax": "markdown"
+    }
+  ],
+  "claude_skills": "aliases",
+  "component": "tla-tooling",
+  "directories": [
+    ".agents/skills/tla-modeling",
+    ".agents/skills/tla-setup",
+    ".agents/skills/tlaps"
+  ],
+  "files": {
+    ".agents/skills/tla-modeling/SKILL.md": {
+      "executable": false,
+      "sha256": "335bc3c5a330ead41389c943b8f81f4b02af78152311dd55a0e81202dfdbf84f"
+    },
+    ".agents/skills/tla-setup/SKILL.md": {
+      "executable": false,
+      "sha256": "20a16f87397d2ef0acce412b802d5a7335eb05ba1759c93ccbf4625d6bfacd4f"
+    },
+    ".agents/skills/tlaps/ATTRIBUTION.md": {
+      "executable": false,
+      "sha256": "320efe6bb6bed617cdd82748d0993fea06e389ab1d70491d2351e9fef6cdf109"
+    },
+    ".agents/skills/tlaps/SKILL.md": {
+      "executable": false,
+      "sha256": "7032c784c2012d69a6ec274ffd2d564a98ad8b28649d9a3957f91c486b924423"
+    },
+    ".agents/skills/tlaps/references/advanced-options.md": {
+      "executable": false,
+      "sha256": "23c89c04100cf5239d1e32cdb33e2fb910c8497fe20c46b84e0e6905b9e2d00d"
+    },
+    ".agents/skills/tlaps/references/backends.md": {
+      "executable": false,
+      "sha256": "5ae9030d2544ab661257a918371778d48252052c19e47608557885580883c4e7"
+    },
+    ".agents/skills/tlaps/references/hierarchical-proofs.md": {
+      "executable": false,
+      "sha256": "524de72b28eb6844dee87cda272ed27f612ff3deb28d265423e3a58c4c3a8868"
+    },
+    ".agents/skills/tlaps/references/hints.txt": {
+      "executable": false,
+      "sha256": "573ba7dd961e06634fbebd129ccdbfa729a1ff2338e0412502982659bc9b93c9"
+    },
+    ".agents/skills/tlaps/references/instance-bridge.md": {
+      "executable": false,
+      "sha256": "c25dc19ecbba07dc9497608358a96301017c2e648661ebed7a413481a4a52ce8"
+    },
+    ".agents/skills/tlaps/references/other-proof-constructs.md": {
+      "executable": false,
+      "sha256": "f84d47a5feb705992e94029a80c28a9a1b23f45ee1908ddcf0fd0be093ce3d82"
+    },
+    ".agents/skills/tlaps/references/practical-hints.md": {
+      "executable": false,
+      "sha256": "ae94b794fd69dac265d0f97839e0f149a018d338b1d4686b7efb043dc51e7196"
+    },
+    ".agents/skills/tlaps/references/tactics.md": {
+      "executable": false,
+      "sha256": "2c26b4fb6aacb54e9f422db9ef6f52cc953d2b7f265f7320fa1ad87569b891d4"
+    },
+    ".agents/skills/tlaps/references/tlapm-soundness.md": {
+      "executable": false,
+      "sha256": "1d200d875fef0288e8be7074023b3f1b79ccfbfe471dc43c913d99022e419ed0"
+    },
+    ".agents/skills/tlaps/references/type-correctness-lemma.md": {
+      "executable": false,
+      "sha256": "7e554484b42e3d62511cb1b237c2ae0bd72b4218c42c3cc03e4ed8e70dde42f0"
+    },
+    ".agents/skills/tlaps/references/unsupported-features.md": {
+      "executable": false,
+      "sha256": "b3d116269aad93939c473ce70ddd89bad56beb1b8d246ed137e2ba96979a322d"
+    }
+  },
+  "format": 1,
+  "json_entries": [],
+  "link_source": null,
+  "mode": "copy",
+  "revision": "b34b1f9e2cb50ccf2e82a9d9b1676fb48410517c",
+  "symlinks": {
+    ".claude/skills/tla-modeling": "../../.agents/skills/tla-modeling",
+    ".claude/skills/tla-setup": "../../.agents/skills/tla-setup",
+    ".claude/skills/tlaps": "../../.agents/skills/tlaps"
+  }
+}
