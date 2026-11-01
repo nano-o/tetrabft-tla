@@ -2,8 +2,8 @@
 
 (*********************************************************************************)
 (* This is a high-level specification of the TetraBFT consensus algorithm. There *)
-(* is no network or messages at this level of abstraction, but we do model       *)
-(* Byzantine failures.                                                           *)
+(* is no network or messages at this level of abstraction: votes are visible    *)
+(* immediately. We model Byzantine failures and fair local processing.          *)
 (*********************************************************************************)
 
 EXTENDS Integers
@@ -162,6 +162,34 @@ Next ==
         \/ Propose(v)
 
 Spec == Init /\ [][Next]_vars
+
+\* Propose abstracts the correct leader's work in goodRound. Weak fairness
+\* requires a continuously enabled round start, proposal or voting phase
+\* eventually to run.
+\* Quantify over values inside each action so that fairness schedules a
+\* voting phase even if the choice of eligible value changes over time.
+LocalFairness ==
+    /\ WF_vars(\E v \in V : Propose(v))
+    /\ \A p \in P \ Byz, r \in Round :
+        /\ WF_vars(StartRound(p, r))
+        /\ WF_vars(\E v \in V : Vote1(p, v, r))
+        /\ WF_vars(\E v \in V : Vote2(p, v, r))
+        /\ WF_vars(\E v \in V : Vote3(p, v, r))
+        /\ WF_vars(\E v \in V : Vote4(p, v, r))
+
+\* Delivery is implicit and immediate in this abstraction. A model with
+\* messages will need separate fairness for delivery to correct processes.
+\* ByzantineHavoc remains unrestricted; no fairness is imposed on it.
+FairSpec == Spec /\ LocalFairness
+
+\* This is a global phase-4 certificate, as defined by decided above.
+\* Local receipt of a decision is not represented at this abstraction level.
+Termination == <>(decided # {})
+
+\* Future proof target: FairSpec => Liveness. No TLAPS proof is claimed.
+\* Assume a good round exists. Arrival is to follow from StartRound fairness
+\* and the round bound, which remains to be established as an invariant.
+Liveness == goodRound \in Round => Termination
 
 Consistency == \A v1,v2 \in decided : v1 = v2
 

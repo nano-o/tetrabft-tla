@@ -22,10 +22,13 @@ quiescent-termination predicates and manual enabledness checks have been
 removed. Report finite model-checking bounds separately from TLAPS results.
 
 The liveness target is eventual decision under fair message delivery and
-the required processing fairness, assuming that `goodRound` has a correct
-leader and every correct process eventually reaches it without going
-past it. Byzantine behavior remains possible throughout. Proving that
-view change produces such a round is outside this target.
+processing by correct processes, including weak fairness of `StartRound`.
+Assume that `goodRound` is a valid round with a correct leader. Eventual
+arrival is to follow from fairness and the round bound, which must be
+established as a protocol invariant. Delivery is currently implicit and
+immediate in the specification. Byzantine behavior remains possible
+throughout. Proving that view change produces such a good round is outside
+this target.
 
 `proof_modules` remains empty until there is a TLAPS result to report.
 Read the `tlaps` skill before adding or reporting a TLAPS proof.
